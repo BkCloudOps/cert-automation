@@ -5,5 +5,5 @@
   ],
   "gateway_file": "gateway.yaml",
   "certificate_file": "ingress-gateway-certificate.yaml",
-  "repo_name": "myorg/k8s-configs"
+  "repo_name": "BkCloudOps/cert-automation"
 }
