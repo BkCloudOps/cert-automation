@@ -224,7 +224,10 @@ def process_certificate_request(
     namespace: str,
     dns_names: List[str],
     output_gateway: str = None,
-    output_certificate: str = None
+    output_certificate: str = None,
+    repo_name: str = None,
+    create_audit: bool = False,
+    audit_file: str = "AUDIT.md"
 ):
     """
     Main processing function to add DNS names to gateway and certificate files.
@@ -233,19 +236,19 @@ def process_certificate_request(
     print(f"Certificate Automation - Processing Request")
     print(f"{'='*80}")
     print(f"Namespace: {namespace}")
+    if repo_name:
+        print(f"Repository: {repo_name}")
     print(f"DNS Names to add:")
     for i, dns in enumerate(dns_names, 1):
         print(f"  {i}. {dns}")
     print(f"{'='*80}\n")
     
-    # Set default output files
+    # Set default output files - modify in place for CI/CD
     if output_gateway is None:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_gateway = gateway_file.replace('.yaml', f'_updated_{timestamp}.yaml')
+        output_gateway = gateway_file
     
     if output_certificate is None:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_certificate = certificate_file.replace('.yaml', f'_updated_{timestamp}.yaml')
+        output_certificate = certificate_file
     
     # Step 1: Load gateway.yaml
     print("Step 1: Loading gateway.yaml...")
@@ -337,6 +340,199 @@ def process_certificate_request(
     print(f"  • Even if a DNS is covered by a wildcard in the gateway,")
     print(f"    it still needs to be added to the certificate if new")
     print(f"{'='*80}\n")
+    
+    # Generate audit log and PR description
+    generate_audit_log(
+    namespace: str,
+    dns_names: List[str],
+    gateway_results: List[Dict[str, str]],
+    cert_results: List[Dict[str, str]],
+    repo_name: str = None
+) -> str:
+    """Generate audit log content"""
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S UTC")
+    
+    content = f"\n## Automation Run - {timestamp}\n\n"
+    if repo_name:
+        content += f"**Repository:** `{repo_name}`\n\n"
+    content += f"**Namespace:** `{namespace}`\n\n"
+    
+    content += "**DNS Names Requested:**\n"
+    for i, dns in enumerate(dns_names, 1):
+        content += f"{i}. `{dns}`\n"
+    content += "\n"
+    
+    content += "### Gateway Changes\n\n"
+    gateway_added = [r for r in gateway_results if r['added']]
+    gateway_skipped = [r for r in gateway_results if not r['added']]
+    
+    if gateway_added:
+        content += "**Added to Gateway:**\n"
+        for r in gateway_added:
+            content += f"- ✅ `{r['dns_name']}`\n"
+            content += f"  - Reason: {r['reason']}\n"
+    else:
+        content += "**Added to Gateway:** None\n"
+    
+    if gateway_skipped:
+        content += "\n**Skipped (Already Covered):**\n"
+        for r in gateway_skipped:
+            content += f"- ⏭️  `{r['dns_name']}`\n"
+            content += f"  - Reason: {r['reason']}\n"
+    
+    content += "\n### Certificate Changes\n\n"
+    cert_added = [r for r in cert_results if r['added']]
+    cert_skipped = [r for r in cert_results if not r['added']]
+    
+    if cert_added:
+        content += "**Added to Certificate:**\n"
+        for r in cert_added:
+            content += f"- ✅ `{r['dns_name']}`\n"
+            content += f"  - Reason: {r['reason']}\n"
+    else:
+        content += "**Added to Certificate:** None\n"
+    
+    if cert_skipped:
+        content += "\n**Skipped (Already Exists):**\n"
+        for r in cert_skipped:
+            content += f"- ⏭️  `{r['dns_name']}`\n"
+            content += f"  - Reason: {r['reason']}\n"
+    
+    content += "\n---\n"
+    return content
+
+
+def generate_pr_description(
+    namespace: str,
+    parser.add_argument(
+        '--repo-name',
+        help='Repository name for audit logging (e.g., myorg/my-k8s-configs)'
+    )
+    
+    parser.add_argument(
+        '--create-audit',
+        action='store_true',
+        help='Create/update audit log and PR description'
+    )
+    
+    parser.add_argument(
+        '--audit-file',
+        repo_name = input_data.get('repo_name', args.repo_name)
+        
+        if not namespace:
+            print("ERROR: 'namespace' is required in JSON input")
+            sys.exit(1)
+        if not dns_names:
+            print("ERROR: 'dns_names' list is required in JSON input")
+            sys.exit(1)
+    else:
+        # Use command line arguments
+        if not args.namespace:
+            print("ERROR: --namespace is required when not using --input")
+            parser.print_help()
+            sys.exit(1)
+        if not args.dns:
+            print("ERROR: --dns is required when not using --input")
+            parser.print_help()
+            sys.exit(1)
+        
+        gateway_file = args.gateway
+        certificate_file = args.certificate
+        namespace = args.namespace
+        dns_names = args.dns
+        output_gateway = args.output_gateway
+        output_certificate = args.output_certificate
+        repo_name = args.repo_name
+    
+    process_certificate_request(
+        gateway_file=gateway_file,
+        certificate_file=certificate_file,
+        namespace=namespace,
+        dns_names=dns_names,
+        output_gateway=output_gateway,
+        output_certificate=output_certificate,
+        repo_name=repo_name,
+        create_audit=args.create_audit,
+        audit_file=args.audit_fil
+            description += f"- **`{r['dns_name']}`**\n"
+            description += f"  - 💡 {r['reason']}\n\n"
+    
+    if gateway_skipped:
+        description += "#### ⏭️  Skipped (Already Covered by Wildcards)\n\n"
+        for r in gateway_skipped:
+            description += f"- **`{r['dns_name']}`**\n"
+            description += f"  - 💡 {r['reason']}\n\n"
+    
+    description += "### 📜 Certificate Changes\n\n"
+    description += f"**Summary:** {len(cert_added)} added, {len(cert_skipped)} skipped\n\n"
+    
+    if cert_added:
+        description += "#### ✅ Added to Certificate\n\n"
+        for r in cert_added:
+            description += f"- **`{r['dns_name']}`**\n"
+            description += f"  - 💡 {r['reason']}\n\n"
+    
+    if cert_skipped:
+        description += "#### ⏭️  Skipped (Already in Certificate)\n\n"
+        for r in cert_skipped:
+            description += f"- **`{r['dns_name']}`**\n"
+            description += f"  - 💡 {r['reason']}\n\n"
+    
+    description += "---\n\n"
+    description += "### ℹ️  Key Information\n\n"
+    description += "- Gateway uses wildcards (`*.domain.com`) to route traffic efficiently\n"
+    description += "- Certificates must list each DNS name explicitly for TLS validation\n"
+    description += "- Even if a DNS is covered by a wildcard in the gateway, it still needs to be in the certificate\n\n"
+    description += "---\n\n"
+    description += "🤖 *This PR was automatically generated by the Certificate Automation workflow*\n"
+    
+    return description
+
+
+def append_to_audit_file(audit_file: str, content: str):
+    """Append content to audit file, create if doesn't exist"""
+    import os
+    
+    if not os.path.exists(audit_file):
+        with open(audit_file, 'w') as f:
+            f.write("# Certificate Automation Audit Log\n\n")
+            f.write("This file tracks all automated changes to gateway and certificate configurations.\n\n")
+            f.write("---\n")
+    
+    with open(audit_file, 'a') as f:
+        f.write(content)
+
+
+def if create_audit:
+        audit_content = generate_audit_log(
+            namespace=namespace,
+            dns_names=dns_names,
+            gateway_results=gateway_results,
+            cert_results=cert_results,
+            repo_name=repo_name
+        )
+        append_to_audit_file(audit_file, audit_content)
+        
+        pr_description = generate_pr_description(
+            namespace=namespace,
+            dns_names=dns_names,
+            gateway_results=gateway_results,
+            cert_results=cert_results,
+            repo_name=repo_name
+        )
+        
+        # Write PR description to file for GitHub Actions to use
+        with open('PR_DESCRIPTION.md', 'w') as f:
+            f.write(pr_description)
+        print(f"✓ Generated PR description: PR_DESCRIPTION.md")
+        print(f"✓ Updated audit log: {audit_file}")
+    
+    return {
+        'gateway_results': gateway_results,
+        'cert_results': cert_results,
+        'gateway_added': len([r for r in gateway_results if r['added']]),
+        'cert_added': len([r for r in cert_results if r['added']])
+    }
 
 
 def load_input_from_json(json_file: str) -> Dict[str, Any]:
