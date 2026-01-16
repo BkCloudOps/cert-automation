@@ -54,13 +54,12 @@ def add_dns_to_gateway_text(gateway_file: str, namespace: str, dns_names: List[s
         lines = f.readlines()
     
     # Find the server block for this namespace
-    namespace_pattern = f"{namespace}/"
+    namespace_pattern = f"- {namespace}/"
     start_idx = None
     indent_spaces = None
     
     for i, line in enumerate(lines):
-        # Match both quoted and unquoted patterns: - platform-scope/ or - "platform-scope/
-        if f"- {namespace_pattern}" in line or f'- "{namespace_pattern}' in line:
+        if namespace_pattern in line:
             start_idx = i
             indent_spaces = len(line) - len(line.lstrip())
             break
@@ -85,8 +84,8 @@ def add_dns_to_gateway_text(gateway_file: str, namespace: str, dns_names: List[s
         
         # Only collect lines that are part of this namespace's host list
         if stripped.startswith('- '):
-            # Extract the host value (remove leading '- ' and any quotes)
-            host = stripped[2:].strip().strip('"').strip("'")
+            # Extract the host value (remove leading '- ')
+            host = stripped[2:].strip()
             # Check if this host belongs to current namespace or is a wildcard for it
             if host.startswith(f'{namespace}/') or host.startswith(f'{namespace}/*.'):
                 existing_hosts.append(host)
@@ -139,12 +138,7 @@ def add_dns_to_gateway_text(gateway_file: str, namespace: str, dns_names: List[s
             })
         else:
             # Insert new line with exact same indentation
-            # Check if existing hosts use quotes
-            uses_quotes = any('"' in line for line in lines[start_idx:last_host_idx+1] if f'{namespace}/' in line)
-            if uses_quotes:
-                new_line = f"{' ' * indent_spaces}- \"{namespace}/{dns_name}\"\n"
-            else:
-                new_line = f"{' ' * indent_spaces}- {namespace}/{dns_name}\n"
+            new_line = f"{' ' * indent_spaces}- {namespace}/{dns_name}\n"
             lines.insert(insert_idx, new_line)
             insert_idx += 1
             modified = True
@@ -366,6 +360,101 @@ def generate_pr_description(namespace: str, dns_names: List[str], gateway_result
     return desc
 
 
+def generate_audit_log_multi(namespaces: List[str], all_dns_names: List[str], 
+                             gateway_results: List[Dict], cert_results: List[Dict], 
+                             repo_name: str = None) -> str:
+    """Generate audit log entry for multi-namespace requests"""
+    timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')
+    
+    log = f"\n## Automation Run - {timestamp}\n\n"
+    if repo_name:
+        log += f"**Repository:** `{repo_name}`\n\n"
+    log += f"**Namespaces:** {', '.join([f'`{ns}`' for ns in namespaces])}\n\n"
+    log += f"**Total DNS Names:** {len(all_dns_names)}\n\n"
+    
+    log += "### Gateway Changes\n\n"
+    gateway_added = [r for r in gateway_results if r['added']]
+    if gateway_added:
+        log += "**Added to Gateway:**\n"
+        for r in gateway_added:
+            log += f"- ✅ `{r['dns_name']}`\n"
+            log += f"  - Reason: {r['reason']}\n"
+    
+    gateway_skipped = [r for r in gateway_results if not r['added']]
+    if gateway_skipped:
+        log += "\n**Skipped (Gateway):**\n"
+        for r in gateway_skipped:
+            log += f"- ⏭️ `{r['dns_name']}`\n"
+            log += f"  - Reason: {r['reason']}\n"
+    
+    log += "\n### Certificate Changes\n\n"
+    cert_added = [r for r in cert_results if r['added']]
+    if cert_added:
+        log += "**Added to Certificate:**\n"
+        for r in cert_added:
+            log += f"- ✅ `{r['dns_name']}`\n"
+            log += f"  - Reason: {r['reason']}\n"
+    
+    cert_skipped = [r for r in cert_results if not r['added']]
+    if cert_skipped:
+        log += "\n**Skipped (Certificate):**\n"
+        for r in cert_skipped:
+            log += f"- ⏭️ `{r['dns_name']}`\n"
+            log += f"  - Reason: {r['reason']}\n"
+    
+    log += "\n---\n"
+    return log
+
+
+def generate_pr_description_multi(namespaces: List[str], all_dns_names: List[str],
+                                  gateway_results: List[Dict], cert_results: List[Dict],
+                                  repo_name: str = None) -> str:
+    """Generate PR description for multi-namespace requests"""
+    timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')
+    
+    desc = "## 🔐 Certificate Automation - DNS Names Update\n\n"
+    if repo_name:
+        desc += f"**Repository:** `{repo_name}`\n"
+    desc += f"**Namespaces:** {', '.join([f'`{ns}`' for ns in namespaces])}\n"
+    desc += f"**Automation Run:** {timestamp}\n\n"
+    
+    desc += f"### 📋 Total DNS Names: {len(all_dns_names)}\n\n"
+    
+    gateway_added = [r for r in gateway_results if r['added']]
+    gateway_skipped = [r for r in gateway_results if not r['added']]
+    
+    desc += f"\n### 🌐 Gateway Changes\n\n"
+    desc += f"**Summary:** {len(gateway_added)} added, {len(gateway_skipped)} skipped\n\n"
+    
+    if gateway_added:
+        desc += "#### ✅ Added to Gateway\n\n"
+        for r in gateway_added:
+            desc += f"- **`{r['dns_name']}`**\n"
+            desc += f"  - 💡 {r['reason']}\n"
+    
+    cert_added = [r for r in cert_results if r['added']]
+    cert_skipped = [r for r in cert_results if not r['added']]
+    
+    desc += f"\n### 📜 Certificate Changes\n\n"
+    desc += f"**Summary:** {len(cert_added)} added, {len(cert_skipped)} skipped\n\n"
+    
+    if cert_added:
+        desc += "#### ✅ Added to Certificate\n\n"
+        for r in cert_added:
+            desc += f"- **`{r['dns_name']}`**\n"
+            desc += f"  - 💡 {r['reason']}\n"
+    
+    desc += "\n---\n\n"
+    desc += "### ℹ️  Key Information\n\n"
+    desc += "- Gateway uses wildcards (`*.domain.com`) to route traffic efficiently\n"
+    desc += "- Certificates must list each DNS name explicitly for TLS validation\n"
+    desc += "- Even if a DNS is covered by a wildcard in the gateway, it still needs to be in the certificate\n\n"
+    desc += "---\n\n"
+    desc += "🤖 *This PR was automatically generated by the Certificate Automation workflow*\n"
+    
+    return desc
+
+
 def main():
     parser = argparse.ArgumentParser(description='Certificate Automation - Text-based')
     parser.add_argument('--input', help='JSON input file path')
@@ -383,55 +472,95 @@ def main():
     if args.input:
         with open(args.input, 'r') as f:
             input_data = json.load(f)
+        
         gateway_file = input_data.get('gateway_file', 'gateway.yaml')
         cert_file = input_data.get('certificate_file', 'ingress-gateway-certificate.yaml')
-        namespace = input_data['namespace']
-        dns_names = input_data['dns_names']
         repo_name = input_data.get('repo_name', args.repo_name)
+        
+        # Check if using new multi-namespace format
+        if 'requests' in input_data:
+            requests = input_data['requests']
+        else:
+            # Legacy single namespace format
+            requests = [{
+                'namespace': input_data['namespace'],
+                'dns_names': input_data['dns_names']
+            }]
     else:
         gateway_file = args.gateway
         cert_file = args.certificate
-        namespace = args.namespace
-        dns_names = args.dns
         repo_name = args.repo_name
+        requests = [{
+            'namespace': args.namespace,
+            'dns_names': args.dns
+        }]
     
     print(f"\n{'='*80}")
     print(f"Certificate Automation - Text-Based Processing")
     print(f"{'='*80}")
-    print(f"Namespace: {namespace}")
     if repo_name:
         print(f"Repository: {repo_name}")
-    print(f"DNS Names to add:")
-    for i, dns in enumerate(dns_names, 1):
-        print(f"  {i}. {dns}")
+    print(f"Processing {len(requests)} namespace request(s)")
     print(f"{'='*80}\n")
     
-    # Get credential name
-    print("Finding TLS credential...")
-    credential_name = get_credential_name_for_namespace_text(gateway_file, namespace)
-    if not credential_name:
-        print(f"ERROR: Could not find credential for namespace '{namespace}'")
-        sys.exit(1)
-    print(f"  Found credential: {credential_name}\n")
+    # Track all results across all namespaces
+    all_gateway_results = []
+    all_cert_results = []
+    all_dns_names = []
+    namespaces_processed = []
     
-    # Process gateway
-    print("Processing gateway hosts...")
-    gateway_modified, gateway_results = add_dns_to_gateway_text(gateway_file, namespace, dns_names)
-    
-    # Process certificate
-    print("\nProcessing certificate DNS names...")
-    cert_modified, cert_results = add_dns_to_certificate_text(cert_file, credential_name, dns_names)
+    # Process each namespace request
+    for idx, request in enumerate(requests, 1):
+        namespace = request['namespace']
+        dns_names = request['dns_names']
+        
+        print(f"\n{'─'*80}")
+        print(f"Request {idx}/{len(requests)}: Namespace '{namespace}'")
+        print(f"{'─'*80}")
+        print(f"DNS Names to add:")
+        for i, dns in enumerate(dns_names, 1):
+            print(f"  {i}. {dns}")
+        print()
+        
+        namespaces_processed.append(namespace)
+        all_dns_names.extend(dns_names)
+        
+        # Get credential name
+        print("Finding TLS credential...")
+        credential_name = get_credential_name_for_namespace_text(gateway_file, namespace)
+        if not credential_name:
+            print(f"ERROR: Could not find credential for namespace '{namespace}'")
+            print(f"Skipping this namespace...\n")
+            continue
+        print(f"  Found credential: {credential_name}\n")
+        
+        # Process gateway
+        print("Processing gateway hosts...")
+        gateway_modified, gateway_results = add_dns_to_gateway_text(gateway_file, namespace, dns_names)
+        all_gateway_results.extend(gateway_results)
+        
+        # Process certificate
+        print("\nProcessing certificate DNS names...")
+        cert_modified, cert_results = add_dns_to_certificate_text(cert_file, credential_name, dns_names)
+        all_cert_results.extend(cert_results)
+        
+        print(f"\n  Namespace '{namespace}' Summary:")
+        print(f"    Gateway: {len([r for r in gateway_results if r['added']])} added")
+        print(f"    Certificate: {len([r for r in cert_results if r['added']])} added")
     
     print(f"\n{'='*80}")
-    print("SUMMARY")
+    print("OVERALL SUMMARY")
     print(f"{'='*80}")
-    print(f"Gateway: {len([r for r in gateway_results if r['added']])} added")
-    print(f"Certificate: {len([r for r in cert_results if r['added']])} added")
+    print(f"Namespaces processed: {len(namespaces_processed)}")
+    print(f"Total DNS names: {len(all_dns_names)}")
+    print(f"Gateway hosts added: {len([r for r in all_gateway_results if r['added']])} / {len(all_gateway_results)}")
+    print(f"Certificate DNS added: {len([r for r in all_cert_results if r['added']])} / {len(all_cert_results)}")
     print(f"{'='*80}\n")
     
     # Generate audit and PR description
     if args.create_audit:
-        audit_content = generate_audit_log(namespace, dns_names, gateway_results, cert_results, repo_name)
+        # For multi-namespace, combine all results
+        audit_content = generate_audit_log_multi(namespaces_processed, all_dns_names, all_gateway_results, all_cert_results, repo_name)
         
         # Append to audit file
         try:
@@ -445,7 +574,7 @@ def main():
         print(f"✓ Updated audit log: {args.audit_file}")
         
         # Write PR description
-        pr_desc = generate_pr_description(namespace, dns_names, gateway_results, cert_results, repo_name)
+        pr_desc = generate_pr_description_multi(namespaces_processed, all_dns_names, all_gateway_results, all_cert_results, repo_name)
         with open('PR_DESCRIPTION.md', 'w') as f:
             f.write(pr_desc)
         print(f"✓ Generated PR description: PR_DESCRIPTION.md")
