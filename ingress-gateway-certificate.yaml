@@ -1,0 +1,154 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: claude-plt-ingress-certificate
+  namespace: claude-plt-system
+spec:
+  secretName: claude-plt-ingress-certificate
+  issuerRef:
+    name: acme-clusterissuer
+    kind: ClusterIssuer
+  commonName: claude-plt.pod.cac.corp.aks.sunlife.com
+  dnsNames:
+    - claude-plt.pod.cac.corp.aks.sunlife.com
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: claude-plt-provisioning-services-ingress-certificate
+  namespace: claude-plt-system
+spec:
+  secretName: claude-plt-provisioning-services-ingress-certificate
+  issuerRef:
+    name: acme-clusterissuer
+    kind: ClusterIssuer
+  commonName: provisioning-services.pod.cac.corp.aks.sunlife.com
+  dnsNames:
+    - provisioning-services.pod.cac.corp.aks.sunlife.com
+    - apigee-ci.provisioning-services.pod.cac.corp.aks.sunlife.com
+    - cf-mgmt.provisioning-services.pod.cac.corp.aks.sunlife.com
+    - change-api.provisioning-services.pod.cac.corp.aks.sunlife.com
+    - provisioning-approval.provisioning-services.pod.cac.corp.aks.sunlife.com
+    - provisioning.provisioning-services.pod.cac.corp.aks.sunlife.com
+    - provisioning-auth.provisioning-services.pod.cac.corp.aks.sunlife.com
+    - provisioning.platform.sunlife.io
+    - cf-mgmt.corp.aks.sunlife.com
+    - provisioning-approval.corp.aks.sunlife.com
+    - change-api.corp.aks.sunlife.com
+    - change-api.corp.aks.sunlife.com
+    - apigee-ci.corp.aks.sunlife.com
+    - provisioning-auth.corp.aks.sunlife.com
+    - provisioning.corp.aks.sunlife.com
+    - provisioning-auth.corp.cac.pod.aks.sunlife.com
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: claude-plt-core-services-ingress-certificate
+  namespace: claude-plt-system
+spec:
+  secretName: claude-plt-core-services-ingress-certificate
+  issuerRef:
+    name: acme-clusterissuer
+    kind: ClusterIssuer
+  commonName: core-services.pod.cac.corp.aks.sunlife.com
+  dnsNames:
+    - core-services.pod.cac.corp.aks.sunlife.com
+    - ldap-service.core-services.pod.cac.corp.aks.sunlife.com
+    - ldap-service.pod.corp.aks.sunlife.com
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: claude-plt-platform-scope-ingress-certificate
+  namespace: claude-plt-system
+spec:
+  secretName: claude-plt-platform-scope-ingress-certificate
+  issuerRef:
+    name: acme-clusterissuer
+    kind: ClusterIssuer
+  commonName: platform-scope.pod.cac.corp.aks.sunlife.com
+  dnsNames:
+    - platform-scope.pod.cac.corp.aks.sunlife.com
+    - atlas-chargeback.platform-scope.pod.cac.corp.aks.sunlife.com
+    - finance-intake.platform-scope.pod.cac.corp.aks.sunlife.com
+    - pie-chargeback-api.platform-scope.pod.cac.corp.aks.sunlife.com
+    - pie-github-chargeback-api.platform-scope.pod.cac.corp.aks.sunlife.com
+    - pie-snyk-chargeback-api.platform-scope.pod.cac.corp.aks.sunlife.com
+    - application-resource-mapping.platform-scope.pod.cac.corp.aks.sunlife.com
+    - pie-cost-center-data.platform-scope.pod.cac.corp.aks.sunlife.com
+    - alicloud-chargeback.sunlife.ets
+    - pie-alicloud-chargeback.platform-scope.pod.cac.corp.aks.sunlife.com
+    - databricks-chargeback.sunlife.ets
+    - pie-databricks-chargeback.platform-scope.pod.cac.corp.aks.sunlife.com
+    - aks-chargeback.sunlife.ets
+    - pie-aks-chargeback.platform-scope.pod.cac.corp.aks.sunlife.com
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: claude-plt-pie-grafana-ingress-certificate
+  namespace: claude-plt-system
+spec:
+  secretName: claude-plt-pie-grafana-ingress-certificate
+  issuerRef:
+    name: acme-clusterissuer
+    kind: ClusterIssuer
+  commonName: pie-grafana.pod.cac.corp.aks.sunlife.com
+  dnsNames:
+    - pie-grafana.pod.cac.corp.aks.sunlife.com
+    - ets-grafana.pod.cac.corp.aks.sunlife.com
+    - grafana.sunlife.ets
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: claude-plt-devsecops-ingress-certificate
+  namespace: claude-plt-system
+spec:
+  secretName: claude-plt-devsecops-ingress-certificate
+  issuerRef:
+    name: acme-clusterissuer
+    kind: ClusterIssuer
+  commonName: devsecops.pod.cac.corp.aks.sunlife.com
+  dnsNames:
+    - devsecops.pod.cac.corp.aks.sunlife.com
+    - actions-consumption-api.devsecops.pod.cac.corp.aks.sunlife.com
+    - azure-assets-api.devsecops.pod.cac.corp.aks.sunlife.com
+    - github-reporter.devsecops.pod.cac.corp.aks.sunlife.com
+    - github-webhook-proxy.devsecops.pod.cac.corp.aks.sunlife.com
+    - vault-ops-api.devsecops.pod.cac.corp.aks.sunlife.com
+    - vault-ops-api.aks.sunlife.com
+    - snyk-universal-broker.devsecops.pod.cac.corp.aks.sunlife.com
+    - github-copilot-user-management.devsecops.pod.cac.corp.aks.sunlife.com
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: claude-plt-snow-cmdb-facade-ingress-certificate
+  namespace: claude-plt-system
+spec:
+  secretName: claude-plt-snow-cmdb-facade-ingress-certificate
+  issuerRef:
+    name: acme-clusterissuer
+    kind: ClusterIssuer
+  commonName: snow-cmdb-facade.pod.cac.corp.aks.sunlife.com
+  dnsNames:
+    - snow-cmdb-facade.pod.cac.corp.aks.sunlife.com
+    - snow-cmdb-facade.pod.corp.aks.sunlife.com
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: claude-plt-network-security-ingress-certificate
+  namespace: claude-plt-system
+spec:
+  secretName: claude-plt-network-security-ingress-certificate
+  issuerRef:
+    name: acme-clusterissuer
+    kind: ClusterIssuer
+  commonName: network-security.pod.cac.corp.aks.sunlife.com
+  dnsNames:
+    - network-security.pod.cac.corp.aks.sunlife.com
+    - network-security.cac.corp.aks.sunlife.com
+    - netshield.cac.corp.aks.sunlife.com
