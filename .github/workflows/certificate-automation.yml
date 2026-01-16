@@ -10,7 +10,7 @@ on:
         type: string
         default: ''
   
-  # # Automatic trigger when input_data.json is modified
+  # Automatic trigger when input_data.json is modified
   # push:
   #   paths:
   #     - 'input_data.json'
@@ -68,12 +68,6 @@ jobs:
           fi
           echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
           echo "Branch: $BRANCH_NAME"
-      
-      - name: Create automation branch
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -b ${{ steps.branch.outputs.branch_name }}
       
       - name: Run certificate automation
         run: |
