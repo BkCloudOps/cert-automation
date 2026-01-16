@@ -1,0 +1,72 @@
+name: Wildcard Optimization Analysis
+
+on:
+  workflow_dispatch:
+    inputs:
+      input_file:
+        description: 'Input JSON file name (default: input_data.json)'
+        required: false
+        type: string
+        default: 'input_data.json'
+
+jobs:
+  analyze-wildcards:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Run wildcard analyzer
+        run: |
+          python wildcard_analyzer.py \
+            --input ${{ github.event.inputs.input_file }} \
+            --gateway gateway.yaml \
+            --certificate ingress-gateway-certificate.yaml \
+            --output WILDCARD_SUGGESTIONS.md
+      
+      - name: Display suggestions
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          cat WILDCARD_SUGGESTIONS.md
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      
+      - name: Create issue with suggestions
+        if: hashFiles('WILDCARD_SUGGESTIONS.md') != ''
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const suggestions = fs.readFileSync('WILDCARD_SUGGESTIONS.md', 'utf8');
+            
+            // Check if there are actual suggestions (not just "No Optimization")
+            const hasSuggestions = suggestions.includes('💡 Wildcard Suggestions');
+            
+            if (hasSuggestions) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: '💡 Wildcard Optimization Suggestions - ' + new Date().toISOString().split('T')[0],
+                body: suggestions,
+                labels: ['optimization', 'wildcard', 'suggestion']
+              });
+              console.log('✅ Issue created with wildcard suggestions');
+            } else {
+              console.log('ℹ️  No optimization opportunities found. No issue created.');
+            }
+      
+      - name: Upload suggestions as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wildcard-suggestions
+          path: WILDCARD_SUGGESTIONS.md
+          retention-days: 90
