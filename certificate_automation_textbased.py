@@ -82,14 +82,23 @@ def add_dns_to_gateway_text(gateway_file: str, namespace: str, dns_names: List[s
         line = lines[i]
         stripped = line.strip()
         
-        if stripped.startswith('- ') and (f'{namespace}/' in stripped or '/*.' in stripped):
+        # Only collect lines that are part of this namespace's host list
+        if stripped.startswith('- '):
+            # Extract the host value (remove leading '- ')
             host = stripped[2:].strip()
-            existing_hosts.append(host)
-            last_host_idx = i
-            i += 1
-        elif stripped and not stripped.startswith('-') and 'port:' in stripped:
+            # Check if this host belongs to current namespace or is a wildcard for it
+            if host.startswith(f'{namespace}/') or host.startswith(f'{namespace}/*.'):
+                existing_hosts.append(host)
+                last_host_idx = i
+                i += 1
+            else:
+                # Different namespace, stop scanning
+                break
+        elif stripped and not stripped.startswith('-'):
+            # Hit non-list item (like 'port:'), stop scanning
             break
         elif stripped == '':
+            # Empty line, skip
             i += 1
         else:
             break
