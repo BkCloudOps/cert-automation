@@ -1,0 +1,77 @@
+name: Close Open PRs
+
+on:
+  workflow_dispatch:
+    inputs:
+      number_of_prs:
+        description: 'Number of most recent PRs to close'
+        required: true
+        type: number
+        default: 3
+      close_message:
+        description: 'Comment message before closing (optional)'
+        required: false
+        type: string
+        default: 'Closing this PR automatically.'
+
+jobs:
+  close-prs:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    
+    steps:
+      - name: Close recent open PRs
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.CERT_AUTOMATION_TOKEN }}
+          script: |
+            const numberOfPRs = parseInt('${{ github.event.inputs.number_of_prs }}');
+            const closeMessage = '${{ github.event.inputs.close_message }}';
+            
+            console.log(`Looking for the last ${numberOfPRs} open PRs to close...`);
+            
+            // Get open PRs sorted by creation date (newest first)
+            const { data: prs } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              sort: 'created',
+              direction: 'desc',
+              per_page: numberOfPRs
+            });
+            
+            if (prs.length === 0) {
+              console.log('No open PRs found.');
+              return;
+            }
+            
+            console.log(`Found ${prs.length} open PR(s)`);
+            
+            // Close each PR
+            for (const pr of prs) {
+              console.log(`\nClosing PR #${pr.number}: ${pr.title}`);
+              
+              // Add comment if message provided
+              if (closeMessage && closeMessage.trim() !== '') {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr.number,
+                  body: closeMessage
+                });
+                console.log(`  ✓ Added comment`);
+              }
+              
+              // Close the PR
+              await github.rest.pulls.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.number,
+                state: 'closed'
+              });
+              console.log(`  ✓ Closed PR #${pr.number}`);
+            }
+            
+            console.log(`\n✅ Successfully closed ${prs.length} PR(s)`);
