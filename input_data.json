@@ -1,0 +1,10 @@
+{
+  "namespace": "platform-insights",
+  "dns_names": [
+    "example01.platform-insights.prod.cac.corp.aks.manulife.com"
+  ],
+  "gateway_file": "gateway.yaml",
+  "certificate_file": "ingress-gateway-certificate.yaml",
+  "output_gateway": null,
+  "output_certificate": null
+}
