@@ -1,0 +1,161 @@
+name: Certificate Automation
+
+on:
+  # Manual trigger with input parameters
+  workflow_dispatch:
+    inputs:
+      repo_name:
+        description: 'Repository name (e.g., myorg/k8s-configs)'
+        required: true
+        type: string
+      branch_name:
+        description: 'Branch name for PR (optional, auto-generated if empty)'
+        required: false
+        type: string
+        default: ''
+  
+  # Automatic trigger when input_data.json is modified
+  push:
+    paths:
+      - 'input_data.json'
+    branches:
+      - main
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  certificate-automation:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install PyYAML
+      
+      - name: Get repository name
+        id: repo-info
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            REPO_NAME="${{ github.event.inputs.repo_name }}"
+          else
+            REPO_NAME="${{ github.repository }}"
+          fi
+          echo "repo_name=$REPO_NAME" >> $GITHUB_OUTPUT
+          echo "Repository: $REPO_NAME"
+      
+      - name: Generate branch name
+        id: branch
+        run: |
+          if [ "${{ github.event.inputs.branch_name }}" != "" ]; then
+            BRANCH_NAME="${{ github.event.inputs.branch_name }}"
+          else
+            TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+            BRANCH_NAME="cert-automation-${TIMESTAMP}"
+          fi
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          echo "Branch: $BRANCH_NAME"
+      
+      - name: Create automation branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b ${{ steps.branch.outputs.branch_name }}
+      
+      - name: Run certificate automation
+        run: |
+          python certificate_automation.py \
+            --input input_data.json \
+            --repo-name "${{ steps.repo-info.outputs.repo_name }}" \
+            --create-audit \
+            --audit-file AUDIT.md
+      
+      - name: Check for changes
+        id: changes
+        run: |
+          git add -A
+          if git diff --cached --quiet; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "No changes detected"
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "Changes detected"
+          fi
+      
+      - name: Commit changes
+        if: steps.changes.outputs.has_changes == 'true'
+        run: |
+          git commit -m "chore: automated certificate updates
+
+          - Updated gateway and certificate configurations
+          - See AUDIT.md for detailed change log
+          
+          Triggered by: ${{ github.event_name }}
+          Repository: ${{ steps.repo-info.outputs.repo_name }}"
+      
+      - name: Push changes
+        if: steps.changes.outputs.has_changes == 'true'
+        run: |
+          git push origin ${{ steps.branch.outputs.branch_name }}
+      
+      - name: Read PR description
+        if: steps.changes.outputs.has_changes == 'true'
+        id: pr-description
+        run: |
+          if [ -f PR_DESCRIPTION.md ]; then
+            {
+              echo 'description<<EOF'
+              cat PR_DESCRIPTION.md
+              echo EOF
+            } >> $GITHUB_OUTPUT
+          else
+            echo "description=Automated certificate configuration updates" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Create Pull Request
+        if: steps.changes.outputs.has_changes == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ steps.branch.outputs.branch_name }}
+          base: main
+          title: "🔐 Certificate Automation: DNS Names Update"
+          body: ${{ steps.pr-description.outputs.description }}
+          labels: |
+            automation
+            certificates
+            infrastructure
+          reviewers: |
+            # Add default reviewers here
+          draft: false
+      
+      - name: No changes summary
+        if: steps.changes.outputs.has_changes == 'false'
+        run: |
+          echo "✅ No changes needed - all DNS names are already configured correctly"
+      
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: automation-logs
+          path: |
+            AUDIT.md
+            PR_DESCRIPTION.md
+            gateway*.yaml
+            ingress-gateway-certificate*.yaml
+          retention-days: 30
