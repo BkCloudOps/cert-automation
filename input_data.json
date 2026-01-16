@@ -5,6 +5,5 @@
   ],
   "gateway_file": "gateway.yaml",
   "certificate_file": "ingress-gateway-certificate.yaml",
-  "output_gateway": null,
-  "output_certificate": null
+  "repo_name": "myorg/k8s-configs"
 }
