@@ -83,6 +83,7 @@ spec:
     - pie-databricks-chargeback.platform-scope.pod.cac.corp.aks.sunlife.com
     - aks-chargeback.sunlife.ets
     - pie-aks-chargeback.platform-scope.pod.cac.corp.aks.sunlife.com
+    - example03.platform-scope.pod.cac.corp.aks.sunlife.com
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
@@ -99,6 +100,7 @@ spec:
     - pie-grafana.pod.cac.corp.aks.sunlife.com
     - ets-grafana.pod.cac.corp.aks.sunlife.com
     - grafana.sunlife.ets
+    - bkcloudops-chargeback.manulife.ets
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
