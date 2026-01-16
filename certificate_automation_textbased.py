@@ -82,7 +82,7 @@ def add_dns_to_gateway_text(gateway_file: str, namespace: str, dns_names: List[s
         line = lines[i]
         stripped = line.strip()
         
-        if stripped.startswith('- ') and (f'{namespace}/' in stripped or '/*.':
+        if stripped.startswith('- ') and (f'{namespace}/' in stripped or '/*.' in stripped):
             host = stripped[2:].strip()
             existing_hosts.append(host)
             last_host_idx = i
