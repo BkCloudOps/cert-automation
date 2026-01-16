@@ -1,19 +1,19 @@
 {
-  "namespace": "platform-scope",
-  "dns_names": [
-    "applicationtest.platform-scope.pod.cac.corp.aks.sunlife.com",
+  "requests": [
+    {
+      "namespace": "pie-grafana",
+      "dns_names": [
+        "bkcloudops-chargeback.manulife.ets"
+      ]
+    },
+    {
+      "namespace": "platform-scope",
+      "dns_names": [
+        "example03.platform-scope.pod.cac.corp.aks.sunlife.com"
+      ]
+    }
   ],
   "gateway_file": "gateway.yaml",
   "certificate_file": "ingress-gateway-certificate.yaml",
   "repo_name": "BkCloudOps/cert-automation"
-},
-{
-  "namespace": "pie-grafana",
-  "dns_names": [
-    "bkcloudops-chargeback.manulife.ets",
-  ],
-  "gateway_file": "gateway.yaml",
-  "certificate_file": "ingress-gateway-certificate.yaml",
-  "repo_name": "BkCloudOps/cert-automation"
-  
 }
