@@ -71,7 +71,7 @@ jobs:
       
       - name: Run certificate automation
         run: |
-          python certificate_automation.py \
+          python certificate_automation_textbased.py \
             --input input_data.json \
             --repo-name "${{ steps.repo-info.outputs.repo_name }}" \
             --create-audit \
