@@ -130,7 +130,7 @@ jobs:
         if: steps.changes.outputs.has_changes == 'true'
         uses: peter-evans/create-pull-request@v6
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.CERT_AUTOMATION_TOKEN }}
           branch: ${{ steps.branch.outputs.branch_name }}
           base: main
           title: "🔐 Certificate Automation: DNS Names Update"
