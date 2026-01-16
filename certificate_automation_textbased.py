@@ -476,8 +476,15 @@ def main():
     
     # Load from JSON or command line
     if args.input:
-        with open(args.input, 'r') as f:
-            input_data = json.load(f)
+        try:
+            with open(args.input, 'r') as f:
+                input_data = json.load(f)
+        except FileNotFoundError:
+            print(f"ERROR: Input file not found: {args.input}")
+            sys.exit(1)
+        except json.JSONDecodeError as e:
+            print(f"ERROR: Invalid JSON in input file: {e}")
+            sys.exit(1)
         
         gateway_file = input_data.get('gateway_file', 'gateway.yaml')
         cert_file = input_data.get('certificate_file', 'ingress-gateway-certificate.yaml')
@@ -486,8 +493,17 @@ def main():
         # Check if using new multi-namespace format
         if 'requests' in input_data:
             requests = input_data['requests']
+            if not requests or len(requests) == 0:
+                print("ERROR: 'requests' array is empty in input file")
+                sys.exit(1)
         else:
             # Legacy single namespace format
+            if 'namespace' not in input_data:
+                print("ERROR: 'namespace' is required in input file")
+                sys.exit(1)
+            if 'dns_names' not in input_data or not input_data['dns_names']:
+                print("ERROR: 'dns_names' is required and must not be empty")
+                sys.exit(1)
             requests = [{
                 'namespace': input_data['namespace'],
                 'dns_names': input_data['dns_names']
@@ -509,6 +525,21 @@ def main():
     print(f"Processing {len(requests)} namespace request(s)")
     print(f"{'='*80}\n")
     
+    # Verify files exist
+    try:
+        with open(gateway_file, 'r') as f:
+            pass
+    except FileNotFoundError:
+        print(f"ERROR: Gateway file not found: {gateway_file}")
+        sys.exit(1)
+    
+    try:
+        with open(cert_file, 'r') as f:
+            pass
+    except FileNotFoundError:
+        print(f"ERROR: Certificate file not found: {cert_file}")
+        sys.exit(1)
+    
     # Track all results across all namespaces
     all_gateway_results = []
     all_cert_results = []
@@ -517,8 +548,21 @@ def main():
     
     # Process each namespace request
     for idx, request in enumerate(requests, 1):
-        namespace = request['namespace']
-        dns_names = request['dns_names']
+        namespace = request.get('namespace')
+        dns_names = request.get('dns_names', [])
+        
+        # Validate request
+        if not namespace:
+            print(f"\n{'─'*80}")
+            print(f"ERROR: Request {idx} missing 'namespace' field, skipping...")
+            print(f"{'─'*80}\n")
+            continue
+        
+        if not dns_names or len(dns_names) == 0:
+            print(f"\n{'─'*80}")
+            print(f"ERROR: Request {idx} (namespace: {namespace}) has empty 'dns_names', skipping...")
+            print(f"{'─'*80}\n")
+            continue
         
         print(f"\n{'─'*80}")
         print(f"Request {idx}/{len(requests)}: Namespace '{namespace}'")
@@ -535,6 +579,10 @@ def main():
         print("Finding TLS credential...")
         credential_name = get_credential_name_for_namespace_text(gateway_file, namespace)
         if not credential_name:
+        
+        if not cert_results or len(cert_results) == 0:
+            print(f"WARNING: No certificate document found for credential '{credential_name}'")
+        
             print(f"ERROR: Could not find credential for namespace '{namespace}'")
             print(f"Skipping this namespace...\n")
             continue
