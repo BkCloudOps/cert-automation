@@ -4,7 +4,7 @@ Certificate Automation Script
 Automates adding DNS names to Istio Gateway and cert-manager Certificate resources
 """
 
-import yaml
+from ruamel.yaml import YAML
 import json
 import sys
 import argparse
@@ -16,26 +16,48 @@ from datetime import datetime
 
 def yaml_to_json(yaml_file: str) -> Dict[Any, Any]:
     """Convert YAML file to Python dict (JSON-like structure)"""
+    yaml_parser = YAML()
+    yaml_parser.preserve_quotes = True
+    yaml_parser.default_flow_style = False
+    yaml_parser.indent(mapping=2, sequence=2, offset=0)
+    yaml_parser.width = 4096
     with open(yaml_file, 'r') as f:
-        return yaml.safe_load(f)
+        return yaml_parser.load(f)
 
 
 def yaml_documents_to_json(yaml_file: str) -> List[Dict[Any, Any]]:
     """Convert multi-document YAML file to list of Python dicts"""
+    yaml_parser = YAML()
+    yaml_parser.preserve_quotes = True
+    yaml_parser.default_flow_style = False
+    yaml_parser.indent(mapping=2, sequence=2, offset=0)
+    yaml_parser.width = 4096
     with open(yaml_file, 'r') as f:
-        return list(yaml.safe_load_all(f))
+        return list(yaml_parser.load_all(f))
 
 
 def json_to_yaml(data: Any, yaml_file: str):
     """Convert Python dict to YAML file"""
+    yaml_parser = YAML()
+    yaml_parser.preserve_quotes = True
+    yaml_parser.default_flow_style = False
+    yaml_parser.indent(mapping=2, sequence=2, offset=0)
+    yaml_parser.width = 4096
     with open(yaml_file, 'w') as f:
-        yaml.dump(data, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+        yaml_parser.dump(data, f)
 
 
 def json_documents_to_yaml(documents: List[Dict[Any, Any]], yaml_file: str):
     """Convert list of Python dicts to multi-document YAML file"""
+    yaml_parser = YAML()
+    yaml_parser.preserve_quotes = True
+    yaml_parser.default_flow_style = False
+    yaml_parser.indent(mapping=2, sequence=2, offset=0)
+    yaml_parser.width = 4096
     with open(yaml_file, 'w') as f:
-        yaml.dump_all(documents, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+        yaml_parser.dump_all(documents, f)
+    with open(yaml_file, 'w') as f:
+        yaml_parser.dump_all(documents, f)
 
 
 def get_wildcard_patterns(dns_name: str) -> List[str]:
