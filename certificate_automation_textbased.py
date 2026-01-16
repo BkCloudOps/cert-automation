@@ -54,12 +54,13 @@ def add_dns_to_gateway_text(gateway_file: str, namespace: str, dns_names: List[s
         lines = f.readlines()
     
     # Find the server block for this namespace
-    namespace_pattern = f"- {namespace}/"
+    namespace_pattern = f"{namespace}/"
     start_idx = None
     indent_spaces = None
     
     for i, line in enumerate(lines):
-        if namespace_pattern in line:
+        # Match both quoted and unquoted patterns: - platform-scope/ or - "platform-scope/
+        if f"- {namespace_pattern}" in line or f'- "{namespace_pattern}' in line:
             start_idx = i
             indent_spaces = len(line) - len(line.lstrip())
             break
@@ -84,8 +85,8 @@ def add_dns_to_gateway_text(gateway_file: str, namespace: str, dns_names: List[s
         
         # Only collect lines that are part of this namespace's host list
         if stripped.startswith('- '):
-            # Extract the host value (remove leading '- ')
-            host = stripped[2:].strip()
+            # Extract the host value (remove leading '- ' and any quotes)
+            host = stripped[2:].strip().strip('"').strip("'")
             # Check if this host belongs to current namespace or is a wildcard for it
             if host.startswith(f'{namespace}/') or host.startswith(f'{namespace}/*.'):
                 existing_hosts.append(host)
@@ -138,7 +139,12 @@ def add_dns_to_gateway_text(gateway_file: str, namespace: str, dns_names: List[s
             })
         else:
             # Insert new line with exact same indentation
-            new_line = f"{' ' * indent_spaces}- {namespace}/{dns_name}\n"
+            # Check if existing hosts use quotes
+            uses_quotes = any('"' in line for line in lines[start_idx:last_host_idx+1] if f'{namespace}/' in line)
+            if uses_quotes:
+                new_line = f"{' ' * indent_spaces}- \"{namespace}/{dns_name}\"\n"
+            else:
+                new_line = f"{' ' * indent_spaces}- {namespace}/{dns_name}\n"
             lines.insert(insert_idx, new_line)
             insert_idx += 1
             modified = True
