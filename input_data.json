@@ -1,5 +1,5 @@
 {
-  "namespace": "platform-insights",
+  "namespace": "platform-scope",
   "dns_names": [
     "example01.platform-scope.pod.cac.corp.aks.sunlife.com"
   ],
