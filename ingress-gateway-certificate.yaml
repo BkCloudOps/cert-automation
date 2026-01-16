@@ -83,6 +83,7 @@ spec:
     - pie-databricks-chargeback.platform-scope.pod.cac.corp.aks.sunlife.com
     - aks-chargeback.sunlife.ets
     - pie-aks-chargeback.platform-scope.pod.cac.corp.aks.sunlife.com
+    - example01.platform-scope.pod.cac.corp.aks.sunlife.com
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
