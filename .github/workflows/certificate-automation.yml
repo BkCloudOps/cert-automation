@@ -15,11 +15,11 @@ on:
         default: ''
   
   # Automatic trigger when input_data.json is modified
-  push:
-    paths:
-      - 'input_data.json'
-    branches:
-      - main
+  # push:
+  #   paths:
+  #     - 'input_data.json'
+  #   branches:
+  #     - main
 
 env:
   PYTHON_VERSION: '3.11'
