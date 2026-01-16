@@ -83,36 +83,7 @@ jobs:
             --create-audit \
             --audit-file AUDIT.md
       
-      - name: Check for changes
-        id: changes
-        run: |
-          git add -A
-          if git diff --cached --quiet; then
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-            echo "No changes detected"
-          else
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-            echo "Changes detected"
-          fi
-      
-      - name: Commit changes
-        if: steps.changes.outputs.has_changes == 'true'
-        run: |
-          git commit -m "chore: automated certificate updates
-
-          - Updated gateway and certificate configurations
-          - See AUDIT.md for detailed change log
-          
-          Triggered by: ${{ github.event_name }}
-          Repository: ${{ steps.repo-info.outputs.repo_name }}"
-      
-      - name: Push changes
-        if: steps.changes.outputs.has_changes == 'true'
-        run: |
-          git push origin ${{ steps.branch.outputs.branch_name }}
-      
       - name: Read PR description
-        if: steps.changes.outputs.has_changes == 'true'
         id: pr-description
         run: |
           if [ -f PR_DESCRIPTION.md ]; then
@@ -126,12 +97,19 @@ jobs:
           fi
       
       - name: Create Pull Request
-        if: steps.changes.outputs.has_changes == 'true'
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.CERT_AUTOMATION_TOKEN }}
           branch: ${{ steps.branch.outputs.branch_name }}
           base: main
+          commit-message: |
+            chore: automated certificate updates
+            
+            - Updated gateway and certificate configurations
+            - See AUDIT.md for detailed change log
+            
+            Triggered by: ${{ github.event_name }}
+            Repository: ${{ steps.repo-info.outputs.repo_name }}
           title: "🔐 Certificate Automation: DNS Names Update"
           body: ${{ steps.pr-description.outputs.description }}
           labels: |
@@ -141,11 +119,6 @@ jobs:
           reviewers: |
             # Add default reviewers here
           draft: false
-      
-      - name: No changes summary
-        if: steps.changes.outputs.has_changes == 'false'
-        run: |
-          echo "✅ No changes needed - all DNS names are already configured correctly"
       
       - name: Upload artifacts
         if: always()
