@@ -1,7 +1,7 @@
 {
   "namespace": "platform-insights",
   "dns_names": [
-    "example01.platform-insights.prod.cac.corp.aks.manulife.com"
+    "example01.platform-scope.pod.cac.corp.aks.sunlife.com"
   ],
   "gateway_file": "gateway.yaml",
   "certificate_file": "ingress-gateway-certificate.yaml",
