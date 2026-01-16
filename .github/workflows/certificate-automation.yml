@@ -4,17 +4,13 @@ on:
   # Manual trigger with input parameters
   workflow_dispatch:
     inputs:
-      repo_name:
-        description: 'Repository name (e.g., myorg/k8s-configs)'
-        required: true
-        type: string
       branch_name:
         description: 'Branch name for PR (optional, auto-generated if empty)'
         required: false
         type: string
         default: ''
   
-  # Automatic trigger when input_data.json is modified
+  # # Automatic trigger when input_data.json is modified
   # push:
   #   paths:
   #     - 'input_data.json'
@@ -47,16 +43,19 @@ jobs:
           python -m pip install --upgrade pip
           pip install PyYAML
       
+      - name: Read input data
+        id: input-data
+        run: |
+          REPO_NAME=$(python -c "import json; print(json.load(open('input_data.json')).get('repo_name', '${{ github.repository }}'))")
+          echo "repo_name=$REPO_NAME" >> $GITHUB_OUTPUT
+          echo "Repository from input_data.json: $REPO_NAME"
+      
       - name: Get repository name
         id: repo-info
         run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            REPO_NAME="${{ github.event.inputs.repo_name }}"
-          else
-            REPO_NAME="${{ github.repository }}"
-          fi
+          REPO_NAME="${{ steps.input-data.outputs.repo_name }}"
           echo "repo_name=$REPO_NAME" >> $GITHUB_OUTPUT
-          echo "Repository: $REPO_NAME"
+          echo "Using repository: $REPO_NAME"
       
       - name: Generate branch name
         id: branch
