@@ -106,6 +106,12 @@ def add_dns_to_gateway_text(gateway_file: str, namespace: str, dns_names: List[s
     insert_idx = last_host_idx + 1
     modified = False
     
+    # Debug: Show what we found
+    print(f"  Found {len(existing_hosts)} existing hosts in namespace section:")
+    for host in existing_hosts:
+        print(f"    - {host}")
+    print()
+    
     # Process each DNS name
     for dns_name in dns_names:
         full_host = f"{namespace}/{dns_name}"
