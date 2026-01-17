@@ -112,10 +112,12 @@ jobs:
           cd "${{ inputs.environment }}"
       
           python ../scripts/certificate_automation_textbased.py \
-            --input inputdata.json \
+            --input ../inputdata.json \
             --repo-name "${{ steps.branch.outputs.repo_name }}" \
             --create-audit \
             --audit-file AUDIT.md
+
+          
 
       
       # - name: Read PR description
