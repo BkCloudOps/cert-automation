@@ -1,116 +1,131 @@
-- name: Parse issue form
-  id: parse
-  run: |
-    python - <<'PY'
-    import json
-    import os
-    import re
-    import sys
+name: Certificate Automation from Issue
 
-    event_path = os.environ["GITHUB_EVENT_PATH"]
-    with open(event_path, "r") as file:
-      event = json.load(file)
+on:
+  issue_comment:
+    types: [created]
 
-    body = event.get("issue", {}).get("body", "")
+permissions:
+  contents: write
+  pull-requests: write
+  issues: read
 
-    def extract_section(name: str) -> str:
-      pattern = re.compile(rf"^###\s+{re.escape(name)}\s*$", re.MULTILINE)
-      match = pattern.search(body)
-      if not match:
-        return ""
-      start = match.end()
-      next_heading = re.search(r"^###\s+", body[start:], re.MULTILINE)
-      end = start + next_heading.start() if next_heading else len(body)
-      return body[start:end].strip()
+jobs:
+  prepare-request:
+    if: >-
+      github.event.issue.state == 'open' &&
+      github.event.comment.body == '/create-PR-DNS'
+    runs-on: ubuntu-latest
+    outputs:
+      request_payload: ${{ steps.parse.outputs.request_payload }}
+      request_id: ${{ steps.parse.outputs.request_id }}
+      environment: ${{ steps.parse.outputs.environment }}
+    steps:
+      - name: Parse issue form
+        id: parse
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import re
+          import sys
 
-    request_id = extract_section("Request Number")
-    environment = extract_section("Environment Name")
+          event_path = os.environ["GITHUB_EVENT_PATH"]
+          with open(event_path, "r") as file:
+            event = json.load(file)
 
-    # NEW: combined textarea heading from your issue form
-    mappings_raw = extract_section("Namespace and DNS Names")
+          body = event.get("issue", {}).get("body", "")
 
-    def parse_namespace_dns_mappings(text: str):
-      """
-      Expected format (repeated blocks):
-        namespace: some-ns
-        dns:
-          - a.example.com
-          - b.example.com
-      """
-      requests = []
-      current_ns = None
-      current_dns = []
+          def extract_section(name: str) -> str:
+            pattern = re.compile(rf"^###\s+{re.escape(name)}\s*$", re.MULTILINE)
+            match = pattern.search(body)
+            if not match:
+              return ""
+            start = match.end()
+            next_heading = re.search(r"^###\s+", body[start:], re.MULTILINE)
+            end = start + next_heading.start() if next_heading else len(body)
+            return body[start:end].strip()
 
-      # Normalize lines (ignore empty lines)
-      lines = [ln.rstrip() for ln in text.splitlines()]
-      for ln in lines:
-        if not ln.strip():
-          continue
+          request_id = extract_section("Request Number")
+          environment = extract_section("Environment Name")
+          mappings_raw = extract_section("Namespace and DNS Names")
 
-        # namespace line
-        m = re.match(r"^\s*namespace\s*:\s*(.+?)\s*$", ln, re.IGNORECASE)
-        if m:
-          # flush previous block
-          if current_ns:
-            if not current_dns:
-              raise ValueError(f"Namespace '{current_ns}' has no DNS entries.")
-            requests.append({"namespace": current_ns, "dns_names": current_dns})
-          current_ns = m.group(1).strip()
-          current_dns = []
-          continue
+          def parse_namespace_dns_mappings(text: str):
+            requests = []
+            current_ns = None
+            current_dns = []
 
-        # dns: line (just a marker)
-        if re.match(r"^\s*dns\s*:\s*$", ln, re.IGNORECASE):
-          continue
+            lines = [ln.rstrip() for ln in text.splitlines()]
+            for ln in lines:
+              if not ln.strip():
+                continue
 
-        # list item line: - value
-        m = re.match(r"^\s*-\s*(.+?)\s*$", ln)
-        if m:
-          if not current_ns:
-            raise ValueError("Found DNS entry before any namespace.")
-          current_dns.append(m.group(1).strip())
-          continue
+              m = re.match(r"^\s*namespace\s*:\s*(.+?)\s*$", ln, re.IGNORECASE)
+              if m:
+                if current_ns:
+                  if not current_dns:
+                    raise ValueError(f"Namespace '{current_ns}' has no DNS entries.")
+                  requests.append({"namespace": current_ns, "dns_names": current_dns})
+                current_ns = m.group(1).strip()
+                current_dns = []
+                continue
 
-        # Anything else is invalid for this format
-        raise ValueError(f"Unrecognized line: '{ln}'")
+              if re.match(r"^\s*dns\s*:\s*$", ln, re.IGNORECASE):
+                continue
 
-      # flush last block
-      if current_ns:
-        if not current_dns:
-          raise ValueError(f"Namespace '{current_ns}' has no DNS entries.")
-        requests.append({"namespace": current_ns, "dns_names": current_dns})
+              m = re.match(r"^\s*-\s*(.+?)\s*$", ln)
+              if m:
+                if not current_ns:
+                  raise ValueError("Found DNS entry before any namespace.")
+                current_dns.append(m.group(1).strip())
+                continue
 
-      return requests
+              raise ValueError(f"Unrecognized line: '{ln}'")
 
-    missing = []
-    if not request_id:
-      missing.append("Request Number")
-    if not environment:
-      missing.append("Environment Name")
-    if not mappings_raw:
-      missing.append("Namespace and DNS Names")
+            if current_ns:
+              if not current_dns:
+                raise ValueError(f"Namespace '{current_ns}' has no DNS entries.")
+              requests.append({"namespace": current_ns, "dns_names": current_dns})
 
-    if missing:
-      print(f"ERROR: Missing required fields: {', '.join(missing)}")
-      sys.exit(1)
+            return requests
 
-    try:
-      requests = parse_namespace_dns_mappings(mappings_raw)
-    except Exception as e:
-      print(f"ERROR: Failed to parse 'Namespace and DNS Names': {e}")
-      sys.exit(1)
+          missing = []
+          if not request_id:
+            missing.append("Request Number")
+          if not environment:
+            missing.append("Environment Name")
+          if not mappings_raw:
+            missing.append("Namespace and DNS Names")
 
-    payload = {
-      "repo_name": event.get("repository", {}).get("full_name"),
-      "requests": requests,
-    }
+          if missing:
+            print(f"ERROR: Missing required fields: {', '.join(missing)}")
+            sys.exit(1)
 
-    payload_json = json.dumps(payload)
+          try:
+            requests = parse_namespace_dns_mappings(mappings_raw)
+          except Exception as e:
+            print(f"ERROR: Failed to parse 'Namespace and DNS Names': {e}")
+            sys.exit(1)
 
-    with open(os.environ["GITHUB_OUTPUT"], "a") as output:
-      output.write(f"request_id={request_id}\n")
-      output.write(f"environment={environment}\n")
-      output.write("request_payload<<EOF\n")
-      output.write(payload_json + "\n")
-      output.write("EOF\n")
-    PY
+          payload = {
+            "repo_name": event.get("repository", {}).get("full_name"),
+            "requests": requests,
+          }
+
+          payload_json = json.dumps(payload)
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+            output.write(f"request_id={request_id}\n")
+            output.write(f"environment={environment}\n")
+            output.write("request_payload<<EOF\n")
+            output.write(payload_json + "\n")
+            output.write("EOF\n")
+          PY
+
+  run-automation:
+    needs: prepare-request
+    uses: ./.github/workflows/certificate-automation.yml
+    with:
+      request_payload: ${{ needs.prepare-request.outputs.request_payload }}
+      request_id: ${{ needs.prepare-request.outputs.request_id }}
+      environment: ${{ needs.prepare-request.outputs.environment }}
