@@ -78,6 +78,7 @@ spec:
         - "platform-scope/databricks-chargeback.sunlife.ets"
         - "platform-scope/aks-chargeback.sunlife.ets"
         - "platform-scope/example03.platform-scope.pod.cac.corp.aks.sunlife.com"
+        - "platform-scope/TestDNS.prod.sks.com"
       port:
         name: https-platform-scope
         number: 443
