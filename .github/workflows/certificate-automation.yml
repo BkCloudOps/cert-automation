@@ -26,6 +26,9 @@ on:
         default: ''
 
   workflow_call:
+    secrets:
+      CERT_AUTOMATION_TOKEN:
+        required: true
     inputs:
       branch_name:
         required: false
