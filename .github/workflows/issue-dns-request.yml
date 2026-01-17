@@ -114,8 +114,8 @@ jobs:
             json.dump(payload, f, indent=2)
 
           print("✅ Generated payload files:")
-          print(" - request_payload.json (raw)")
-          print(" - request_payload.pretty.json (pretty)")
+          print(" - input.json (raw)")
+          print(" - input.pretty.json (pretty)")
 
           # also expose as outputs (strings)
           payload_json = json.dumps(payload)
@@ -131,29 +131,7 @@ jobs:
         shell: bash
         run: |
           echo "================ PRETTY JSON ================"
-          cat request_payload.pretty.json
+          cat input.pretty.json
           echo "============================================"
 
-      - name: Print payload in logs (raw one-line)
-        shell: bash
-        run: |
-          echo "================ RAW JSON ==================="
-          cat request_payload.json
-          echo
-          echo "============================================"
 
-      - name: Upload payload files as artifact (optional)
-        uses: actions/upload-artifact@v4
-        with:
-          name: request-payload
-          path: |
-            request_payload.json
-            request_payload.pretty.json
-
-      - name: Show outputs (for validation)
-        shell: bash
-        run: |
-          echo "request_id: ${{ steps.parse.outputs.request_id }}"
-          echo "environment: ${{ steps.parse.outputs.environment }}"
-          echo "request_payload (from output, one-line):"
-          echo '${{ steps.parse.outputs.request_payload }}'
