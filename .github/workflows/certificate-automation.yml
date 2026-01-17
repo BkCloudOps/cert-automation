@@ -117,6 +117,8 @@ jobs:
             --create-audit \
             --audit-file AUDIT.md
 
+          rm ../inputdata.json
+
           
 
       
