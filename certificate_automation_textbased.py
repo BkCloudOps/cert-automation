@@ -579,7 +579,9 @@ def main():
         print("Finding TLS credential...")
         credential_name = get_credential_name_for_namespace_text(gateway_file, namespace)
         if not credential_name:
-        
+            print(f"ERROR: Could not find credential for namespace '{namespace}'")
+            print(f"Skipping this namespace...\n")
+            continue
         if not cert_results or len(cert_results) == 0:
             print(f"WARNING: No certificate document found for credential '{credential_name}'")
         
