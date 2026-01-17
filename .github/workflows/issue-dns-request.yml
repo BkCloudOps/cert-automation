@@ -47,43 +47,36 @@ jobs:
 
           request_id = extract_section("Request Number")
           environment = extract_section("Environment Name")
-          requests_raw = extract_section("Namespace + DNS Requests")
+          namespaces_raw = extract_section("Namespaces")
+          dns_raw = extract_section("DNS Names")
 
-          def parse_requests(value: str) -> list[dict]:
-            requests = []
-            current = None
+          def parse_list(value: str) -> list[str]:
+            lines = []
             for line in value.splitlines():
-              stripped = line.strip()
-              if not stripped:
-                continue
-              if stripped.startswith("- namespace:"):
-                namespace = stripped.split(":", 1)[1].strip()
-                current = {"namespace": namespace, "dns_names": []}
-                requests.append(current)
-                continue
-              if stripped.startswith("-") and current is not None:
-                dns = stripped.lstrip("-").strip()
-                if dns and dns not in current["dns_names"]:
-                  current["dns_names"].append(dns)
-                continue
-              if stripped.startswith("dns_names:"):
-                continue
-            return [req for req in requests if req.get("namespace") and req.get("dns_names")]
+              parts = [part.strip() for part in line.split(",")]
+              for part in parts:
+                if part:
+                  lines.append(part)
+            return [item for item in lines if item]
 
-          requests = parse_requests(requests_raw)
+          namespaces = parse_list(namespaces_raw)
+          dns_names = parse_list(dns_raw)
 
           missing = []
           if not request_id:
             missing.append("Request Number")
           if not environment:
             missing.append("Environment Name")
-          if not requests:
-            missing.append("Namespace + DNS Requests")
+          if not namespaces:
+            missing.append("Namespaces")
+          if not dns_names:
+            missing.append("DNS Names")
 
           if missing:
             print(f"ERROR: Missing required fields: {', '.join(missing)}")
             sys.exit(1)
 
+          requests = [{"namespace": ns, "dns_names": dns_names} for ns in namespaces]
           payload = {
             "repo_name": event.get("repository", {}).get("full_name"),
             "requests": requests,
