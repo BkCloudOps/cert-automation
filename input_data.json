@@ -1,9 +1,9 @@
 {
   "requests": [
     {
-      "namespace": "pie-grafana",
+      "namespace": "provisioning-services",
       "dns_names": [
-        "bkcloudops-chargeback.manulife.ets"
+        "testDNS.provisioning-services.pod.cac.plant.aks.sunlife.com"
       ]
     },
     {
