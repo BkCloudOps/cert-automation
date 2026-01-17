@@ -1,0 +1,44 @@
+name: Certificate Automation Request
+description: Request DNS additions for gateway/certificate automation
+title: "[Cert Automation] <request-number> - <environment>"
+labels:
+  - automation
+  - certificates
+body:
+  - type: input
+    id: request_number
+    attributes:
+      label: Request Number
+      description: Tracking/request number for this change.
+      placeholder: "REQ-12345"
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment Name
+      description: Environment name (e.g. dev, qa, prod).
+      placeholder: "prod"
+    validations:
+      required: true
+  - type: textarea
+    id: requests
+    attributes:
+      label: Namespace + DNS Requests
+      description: Provide one or more request blocks that map each namespace to its DNS names.
+      placeholder: |-
+        - namespace: platform-scope
+          dns_names:
+            - example01.platform-scope.pod.cac.corp.aks.sunlife.com
+            - example02.platform-scope.pod.cac.corp.aks.sunlife.com
+        - namespace: pie-grafana
+          dns_names:
+            - grafana.pie-grafana.pod.cac.corp.aks.sunlife.com
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: |
+        After creating the issue, add a comment with:
+        `/create-PR-DNS`
+        This will trigger the automation workflow.

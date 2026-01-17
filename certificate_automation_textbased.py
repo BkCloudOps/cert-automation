@@ -269,6 +269,14 @@ def get_credential_name_for_namespace_text(gateway_file: str, namespace: str) ->
     return None
 
 
+def credential_exists_in_certificate(cert_file: str, credential_name: str) -> bool:
+    """Check if a certificate document contains the credential name."""
+    with open(cert_file, 'r') as f:
+        content = f.read()
+    return re.search(rf'^\s*secretName:\s*{re.escape(credential_name)}\s*$',
+                     content, re.MULTILINE) is not None
+
+
 def generate_audit_log(namespace: str, dns_names: List[str], gateway_results: List[Dict], 
                        cert_results: List[Dict], repo_name: str = None) -> str:
     """Generate audit log entry"""
@@ -582,10 +590,8 @@ def main():
             print(f"ERROR: Could not find credential for namespace '{namespace}'")
             print(f"Skipping this namespace...\n")
             continue
-        if not cert_results or len(cert_results) == 0:
+        if not credential_exists_in_certificate(cert_file, credential_name):
             print(f"WARNING: No certificate document found for credential '{credential_name}'")
-        
-            print(f"ERROR: Could not find credential for namespace '{namespace}'")
             print(f"Skipping this namespace...\n")
             continue
         print(f"  Found credential: {credential_name}\n")
@@ -630,9 +636,8 @@ def main():
         print(f"✓ Updated audit log: {args.audit_file}")
         
         # Write PR description
-        pr_desc = generate_pr_description_multi(namespaces_processed, all_dns_names, all_gateway_results, all_cert_results, repo_name)
         with open('PR_DESCRIPTION.md', 'w') as f:
-            f.write(pr_desc)
+            f.write(audit_content)
         print(f"✓ Generated PR description: PR_DESCRIPTION.md")
 
 

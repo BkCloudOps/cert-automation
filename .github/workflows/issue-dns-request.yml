@@ -1,0 +1,108 @@
+name: Certificate Automation from Issue
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: read
+
+jobs:
+  prepare-request:
+    if: >-
+      github.event.issue.state == 'open' &&
+      github.event.comment.body == '/create-PR-DNS'
+    runs-on: ubuntu-latest
+    outputs:
+      request_payload: ${{ steps.parse.outputs.request_payload }}
+      request_id: ${{ steps.parse.outputs.request_id }}
+      environment: ${{ steps.parse.outputs.environment }}
+    steps:
+      - name: Parse issue form
+        id: parse
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import re
+          import sys
+
+          event_path = os.environ["GITHUB_EVENT_PATH"]
+          with open(event_path, "r") as file:
+            event = json.load(file)
+
+          body = event.get("issue", {}).get("body", "")
+
+          def extract_section(name: str) -> str:
+            pattern = re.compile(rf"^###\s+{re.escape(name)}\s*$", re.MULTILINE)
+            match = pattern.search(body)
+            if not match:
+              return ""
+            start = match.end()
+            next_heading = re.search(r"^###\s+", body[start:], re.MULTILINE)
+            end = start + next_heading.start() if next_heading else len(body)
+            return body[start:end].strip()
+
+          request_id = extract_section("Request Number")
+          environment = extract_section("Environment Name")
+          requests_raw = extract_section("Namespace + DNS Requests")
+
+          def parse_requests(value: str) -> list[dict]:
+            requests = []
+            current = None
+            for line in value.splitlines():
+              stripped = line.strip()
+              if not stripped:
+                continue
+              if stripped.startswith("- namespace:"):
+                namespace = stripped.split(":", 1)[1].strip()
+                current = {"namespace": namespace, "dns_names": []}
+                requests.append(current)
+                continue
+              if stripped.startswith("-") and current is not None:
+                dns = stripped.lstrip("-").strip()
+                if dns and dns not in current["dns_names"]:
+                  current["dns_names"].append(dns)
+                continue
+              if stripped.startswith("dns_names:"):
+                continue
+            return [req for req in requests if req.get("namespace") and req.get("dns_names")]
+
+          requests = parse_requests(requests_raw)
+
+          missing = []
+          if not request_id:
+            missing.append("Request Number")
+          if not environment:
+            missing.append("Environment Name")
+          if not requests:
+            missing.append("Namespace + DNS Requests")
+
+          if missing:
+            print(f"ERROR: Missing required fields: {', '.join(missing)}")
+            sys.exit(1)
+
+          payload = {
+            "repo_name": event.get("repository", {}).get("full_name"),
+            "requests": requests,
+          }
+
+          payload_json = json.dumps(payload)
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+            output.write(f"request_id={request_id}\n")
+            output.write(f"environment={environment}\n")
+            output.write("request_payload<<EOF\n")
+            output.write(payload_json + "\n")
+            output.write("EOF\n")
+          PY
+
+  run-automation:
+    needs: prepare-request
+    uses: ./.github/workflows/certificate-automation.yml
+    with:
+      request_payload: ${{ needs.prepare-request.outputs.request_payload }}
+      request_id: ${{ needs.prepare-request.outputs.request_id }}
+      environment: ${{ needs.prepare-request.outputs.environment }}
