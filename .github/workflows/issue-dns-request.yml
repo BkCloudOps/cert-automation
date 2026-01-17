@@ -121,11 +121,13 @@ jobs:
             output.write(payload_json + "\n")
             output.write("EOF\n")
           PY
-
+  
   run-automation:
     needs: prepare-request
     uses: ./.github/workflows/certificate-automation.yml
+    secrets: inherit
     with:
       request_payload: ${{ needs.prepare-request.outputs.request_payload }}
       request_id: ${{ needs.prepare-request.outputs.request_id }}
       environment: ${{ needs.prepare-request.outputs.environment }}
+
