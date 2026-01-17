@@ -29,23 +29,17 @@ on:
     secrets:
       CERT_AUTOMATION_TOKEN:
         required: true
+
     inputs:
-      branch_name:
-        required: false
-        type: string
-        default: ''
-      request_id:
-        required: false
-        type: string
-        default: ''
-      environment:
-        required: false
-        type: string
-        default: ''
       request_payload:
-        required: false
+        required: true
         type: string
-        default: ''
+      request_id:
+        required: true
+        type: string
+      environment:
+        required: true
+        type: string
   
   # Automatic trigger when input_data.json is modified
   # push:
@@ -56,6 +50,7 @@ on:
 
 env:
   PYTHON_VERSION: '3.11'
+  token: ${{ secrets.CERT_AUTOMATION_TOKEN }}
 
 jobs:
   certificate-automation:
@@ -65,6 +60,21 @@ jobs:
       pull-requests: write
     
     steps:
+      - name: Print received inputs
+        run: |
+          echo "========== RECEIVED VALUES =========="
+          echo "Request ID     : ${{ inputs.request_id }}"
+          echo "Environment    : ${{ inputs.environment }}"
+          echo "Raw Payload:"
+          echo '${{ inputs.request_payload }}'
+          echo "====================================="
+
+      - name: validate the input file
+        run: |
+          echo '${{ inputs.request_payload }}' > inputdata.json
+          echo "File written: inputdata.json"
+          cat inputdata.json | jq .
+          
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -78,106 +88,41 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install ruamel.yaml
 
-      - name: Resolve inputs
-        id: resolved-inputs
-        shell: bash
-        run: |
-          BRANCH_NAME_INPUT="${{ inputs.branch_name || github.event.inputs.branch_name }}"
-          REQUEST_ID_INPUT="${{ inputs.request_id || github.event.inputs.request_id }}"
-          ENVIRONMENT_INPUT="${{ inputs.environment || github.event.inputs.environment }}"
-          REQUEST_PAYLOAD_INPUT="${{ inputs.request_payload || github.event.inputs.request_payload }}"
-
-          echo "branch_name=$BRANCH_NAME_INPUT" >> $GITHUB_OUTPUT
-          echo "request_id=$REQUEST_ID_INPUT" >> $GITHUB_OUTPUT
-          echo "environment=$ENVIRONMENT_INPUT" >> $GITHUB_OUTPUT
-
-          {
-            echo "request_payload<<EOF"
-            echo "$REQUEST_PAYLOAD_INPUT"
-            echo "EOF"
-          } >> $GITHUB_OUTPUT
-
-            
-      - name: Validate input_data.json
-        run: |
-          python -c "import json; json.load(open('input_data.json')); print('JSON OK')"
-
-  
-      - name: Prepare input data
-        if: ${{ steps.resolved-inputs.outputs.request_payload != '' }}
-        shell: bash
-        run: |
-          python - <<'PY'
-          import json, os
-          payload = os.environ.get("REQUEST_PAYLOAD_INPUT", "")
-          data = json.loads(payload)
-          with open("input_data.json", "w") as f:
-            json.dump(data, f, indent=2)
-          print("Wrote valid JSON to input_data.json")
-          PY
-        env:
-          REQUEST_PAYLOAD_INPUT: ${{ steps.resolved-inputs.outputs.request_payload }}
-
-      
-      - name: Read input data
-        id: input-data
-        run: |
-          REPO_NAME=$(python -c "import json; print(json.load(open('input_data.json')).get('repo_name', '${{ github.repository }}'))")
-          echo "repo_name=$REPO_NAME" >> $GITHUB_OUTPUT
-          echo "Repository from input_data.json: $REPO_NAME"
-      
-      - name: Get repository name
-        id: repo-info
-        run: |
-          REPO_NAME="${{ steps.input-data.outputs.repo_name }}"
-          echo "repo_name=$REPO_NAME" >> $GITHUB_OUTPUT
-          echo "Using repository: $REPO_NAME"
       
       - name: Generate branch name
         id: branch
         run: |
-          if [ "${{ steps.resolved-inputs.outputs.branch_name }}" != "" ]; then
-            BRANCH_NAME="${{ steps.resolved-inputs.outputs.branch_name }}"
-          else
-            TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-            BRANCH_NAME="cert-automation-${TIMESTAMP}"
-          fi
+          REPO_NAME=$(jq -r '.repo_name' inputdata.json)
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          BRANCH_NAME="cert-automation-${{ inputs.request_id }}"
+          PR_TITLE="${{ inputs.environment }}-DNS-${{ inputs.request_id }}"
           echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          echo "repo_name=$REPO_NAME" >> $GITHUB_OUTPUT
+          echo "pr_title=$PR_TITLE" >> $GITHUB_OUTPUT
           echo "Branch: $BRANCH_NAME"
-
-      - name: Generate PR title
-        id: pr-title
-        run: |
-          if [ "${{ steps.resolved-inputs.outputs.request_id }}" != "" ] && [ "${{ steps.resolved-inputs.outputs.environment }}" != "" ]; then
-            PR_TITLE="${{ steps.resolved-inputs.outputs.request_id }}-${{ steps.resolved-inputs.outputs.environment }}-DNS"
-          else
-            PR_TITLE="🔐 Certificate Automation: DNS Names Update"
-          fi
-          echo "title=$PR_TITLE" >> $GITHUB_OUTPUT
-          echo "PR title: $PR_TITLE"
+          echo "repo_name=$REPO_NAME"
       
       - name: Run certificate automation
         run: |
           python certificate_automation_textbased.py \
             --input input_data.json \
-            --repo-name "${{ steps.repo-info.outputs.repo_name }}" \
+            --repo-name "${{ steps.branch.outputs.repo_name }}" \
             --create-audit \
             --audit-file AUDIT.md
       
-      - name: Read PR description
-        id: pr-description
-        run: |
-          if [ -f PR_DESCRIPTION.md ]; then
-            {
-              echo 'description<<EOF'
-              cat PR_DESCRIPTION.md
-              echo EOF
-            } >> $GITHUB_OUTPUT
-          else
-            echo "description=Automated certificate configuration updates" >> $GITHUB_OUTPUT
-          fi
+      # - name: Read PR description
+      #   id: pr-description
+      #   run: |
+      #     if [ -f PR_DESCRIPTION.md ]; then
+      #       {
+      #         echo 'description<<EOF'
+      #         cat PR_DESCRIPTION.md
+      #         echo EOF
+      #       } >> $GITHUB_OUTPUT
+      #     else
+      #       echo "description=Automated certificate configuration updates" >> $GITHUB_OUTPUT
+      #     fi
       
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6
@@ -192,15 +137,15 @@ jobs:
             - See AUDIT.md for detailed change log
             
             Triggered by: ${{ github.event_name }}
-            Repository: ${{ steps.repo-info.outputs.repo_name }}
-          title: ${{ steps.pr-title.outputs.title }}
-          body: ${{ steps.pr-description.outputs.description }}
-          labels: |
-            automation
-            certificates
-            infrastructure
-          reviewers: |
-            # Add default reviewers here
+            Repository: ${{ steps.branch.outputs.repo_name }}
+          title: ${{ steps.branch.outputs.pr_title }}
+          # body: ${{ steps.pr-description.outputs.description }}
+          # labels: |
+          #   automation
+          #   certificates
+          #   infrastructure
+          # reviewers: |
+          #   # Add default reviewers here
           draft: false
       
       - name: Upload artifacts
