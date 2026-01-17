@@ -1,32 +1,24 @@
 ## 🔐 Certificate Automation - DNS Names Update
 
 **Repository:** `BkCloudOps/cert-automation`
-**Namespaces:** `pie-grafana`, `platform-scope`
-**Automation Run:** 2026-01-16 18:38:24 UTC
+**Namespaces:** `provisioning-services`, `platform-scope`
+**Automation Run:** 2026-01-17 01:38:55 UTC
 
 ### 📋 Total DNS Names: 2
 
 
 ### 🌐 Gateway Changes
 
-**Summary:** 2 added, 0 skipped
+**Summary:** 0 added, 2 skipped
 
-#### ✅ Added to Gateway
-
-- **`bkcloudops-chargeback.manulife.ets`**
-  - 💡 No matching host or wildcard pattern found
-- **`example03.platform-scope.pod.cac.corp.aks.sunlife.com`**
-  - 💡 No matching host or wildcard pattern found
 
 ### 📜 Certificate Changes
 
-**Summary:** 2 added, 0 skipped
+**Summary:** 1 added, 1 skipped
 
 #### ✅ Added to Certificate
 
-- **`bkcloudops-chargeback.manulife.ets`**
-  - 💡 DNS name must be explicitly listed in certificate for TLS validation
-- **`example03.platform-scope.pod.cac.corp.aks.sunlife.com`**
+- **`testDNS.provisioning-services.pod.cac.plant.aks.sunlife.com`**
   - 💡 DNS name must be explicitly listed in certificate for TLS validation
 
 ---
