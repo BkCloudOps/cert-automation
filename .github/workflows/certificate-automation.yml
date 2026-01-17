@@ -77,28 +77,26 @@ jobs:
           python -m pip install --upgrade pip
           pip install ruamel.yaml
 
-      - name: Resolve inputs
-        id: resolved-inputs
+      - name: Prepare input data
+        if: ${{ steps.resolved-inputs.outputs.request_payload != '' }}
         shell: bash
         run: |
-          BRANCH_NAME_INPUT="${{ inputs.branch_name || github.event.inputs.branch_name }}"
-          REQUEST_ID_INPUT="${{ inputs.request_id || github.event.inputs.request_id }}"
-          ENVIRONMENT_INPUT="${{ inputs.environment || github.event.inputs.environment }}"
-          REQUEST_PAYLOAD_INPUT="${{ inputs.request_payload || github.event.inputs.request_payload }}"
-      
-          echo "branch_name=$BRANCH_NAME_INPUT" >> $GITHUB_OUTPUT
-          echo "request_id=$REQUEST_ID_INPUT" >> $GITHUB_OUTPUT
-          echo "environment=$ENVIRONMENT_INPUT" >> $GITHUB_OUTPUT
-      
-          {
-            echo "request_payload<<EOF"
-            echo "$REQUEST_PAYLOAD_INPUT"
-            echo "EOF"
-          } >> $GITHUB_OUTPUT
-      
+          python - <<'PY'
+          import json, os
+          payload = os.environ.get("REQUEST_PAYLOAD_INPUT", "")
+          data = json.loads(payload)
+          with open("input_data.json", "w") as f:
+            json.dump(data, f, indent=2)
+          print("Wrote valid JSON to input_data.json")
+          PY
+        env:
+          REQUEST_PAYLOAD_INPUT: ${{ steps.resolved-inputs.outputs.request_payload }}
+
+            
       - name: Validate input_data.json
         run: |
           python -c "import json; json.load(open('input_data.json')); print('JSON OK')"
+
 
       - name: Prepare input data
         if: ${{ steps.resolved-inputs.outputs.request_payload != '' }}
