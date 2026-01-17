@@ -1,0 +1,39 @@
+name: Certificate Automation (Test Receiver)
+
+on:
+  workflow_call:
+    inputs:
+      request_payload:
+        required: true
+        type: string
+      request_id:
+        required: true
+        type: string
+      environment:
+        required: true
+        type: string
+
+jobs:
+  debug-inputs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Print received inputs
+        run: |
+          echo "========== RECEIVED VALUES =========="
+          echo "Request ID     : ${{ inputs.request_id }}"
+          echo "Environment    : ${{ inputs.environment }}"
+          echo "Raw Payload:"
+          echo '${{ inputs.request_payload }}'
+          echo "====================================="
+
+      - name: Write payload to file (inputdata.json)
+        run: |
+          echo '${{ inputs.request_payload }}' > inputdata.json
+          echo "File written: inputdata.json"
+
+      - name: Pretty-print JSON from file
+        run: |
+          echo "========== JSON FORMAT CHECK =========="
+          cat inputdata.json | jq .
+          echo "======================================"
