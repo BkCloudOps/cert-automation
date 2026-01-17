@@ -1,41 +1,34 @@
-name: Certificate Automation from Issue
+name: Validate DNS Request Payload
 
 on:
   issue_comment:
     types: [created]
-
   workflow_dispatch:
-    
 
 permissions:
-  contents: write
-  pull-requests: write
   issues: read
+  contents: read
 
 jobs:
-  prepare-request:
+  preview-payload:
     if: >-
-      github.event.issue.state == 'open' &&
-      github.event.comment.body == '/create-PR-DNS'
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.issue.state == 'open' && github.event.comment.body == '/create-PR-DNS')
     runs-on: ubuntu-latest
-    outputs:
-      request_payload: ${{ steps.parse.outputs.request_payload }}
-      request_id: ${{ steps.parse.outputs.request_id }}
-      environment: ${{ steps.parse.outputs.environment }}
+
     steps:
-      - name: Parse issue form
+      - name: Parse issue form -> build JSON payload file
         id: parse
         shell: bash
         run: |
+          set -euo pipefail
+
           python - <<'PY'
-          import json
-          import os
-          import re
-          import sys
+          import json, os, re, sys
 
           event_path = os.environ["GITHUB_EVENT_PATH"]
-          with open(event_path, "r") as file:
-            event = json.load(file)
+          with open(event_path, "r") as f:
+            event = json.load(f)
 
           body = event.get("issue", {}).get("body", "")
 
@@ -93,12 +86,9 @@ jobs:
             return requests
 
           missing = []
-          if not request_id:
-            missing.append("Request Number")
-          if not environment:
-            missing.append("Environment Name")
-          if not mappings_raw:
-            missing.append("Namespace and DNS Names")
+          if not request_id: missing.append("Request Number")
+          if not environment: missing.append("Environment Name")
+          if not mappings_raw: missing.append("Namespace and DNS Names")
 
           if missing:
             print(f"ERROR: Missing required fields: {', '.join(missing)}")
@@ -112,25 +102,58 @@ jobs:
 
           payload = {
             "repo_name": event.get("repository", {}).get("full_name"),
+            "request_id": request_id,
+            "environment": environment,
             "requests": requests,
           }
 
+          # write both raw + pretty
+          with open("request_payload.json", "w") as f:
+            json.dump(payload, f)
+          with open("request_payload.pretty.json", "w") as f:
+            json.dump(payload, f, indent=2)
+
+          print("✅ Generated payload files:")
+          print(" - request_payload.json (raw)")
+          print(" - request_payload.pretty.json (pretty)")
+
+          # also expose as outputs (strings)
           payload_json = json.dumps(payload)
-
-          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
-            output.write(f"request_id={request_id}\n")
-            output.write(f"environment={environment}\n")
-            output.write("request_payload<<EOF\n")
-            output.write(payload_json + "\n")
-            output.write("EOF\n")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+            out.write(f"request_id={request_id}\n")
+            out.write(f"environment={environment}\n")
+            out.write("request_payload<<EOF\n")
+            out.write(payload_json + "\n")
+            out.write("EOF\n")
           PY
-  
-  # run-automation:
-  #   needs: prepare-request
-  #   uses: ./.github/workflows/certificate-automation.yml
-  #   secrets: inherit
-  #   with:
-  #     request_payload: ${{ needs.prepare-request.outputs.request_payload }}
-  #     request_id: ${{ needs.prepare-request.outputs.request_id }}
-  #     environment: ${{ needs.prepare-request.outputs.environment }}
 
+      - name: Print payload in logs (pretty)
+        shell: bash
+        run: |
+          echo "================ PRETTY JSON ================"
+          cat request_payload.pretty.json
+          echo "============================================"
+
+      - name: Print payload in logs (raw one-line)
+        shell: bash
+        run: |
+          echo "================ RAW JSON ==================="
+          cat request_payload.json
+          echo
+          echo "============================================"
+
+      - name: Upload payload files as artifact (optional)
+        uses: actions/upload-artifact@v4
+        with:
+          name: request-payload
+          path: |
+            request_payload.json
+            request_payload.pretty.json
+
+      - name: Show outputs (for validation)
+        shell: bash
+        run: |
+          echo "request_id: ${{ steps.parse.outputs.request_id }}"
+          echo "environment: ${{ steps.parse.outputs.environment }}"
+          echo "request_payload (from output, one-line):"
+          echo '${{ steps.parse.outputs.request_payload }}'
