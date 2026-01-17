@@ -22,23 +22,19 @@ body:
     validations:
       required: true
   - type: textarea
-    id: namespaces
+    id: namespace_dns_mappings
     attributes:
-      label: Namespaces
-      description: One namespace per line.
+      label: Namespace and DNS Names
+      description: Provide each namespace followed by the DNS names for that namespace. Repeat for additional namespaces.
       placeholder: |-
-        platform-scope
-        pie-grafana
-    validations:
-      required: true
-  - type: textarea
-    id: dns_names
-    attributes:
-      label: DNS Names
-      description: One DNS name per line.
-      placeholder: |-
-        example01.platform-scope.pod.cac.corp.aks.sunlife.com
-        example02.platform-scope.pod.cac.corp.aks.sunlife.com
+        namespace: platform-scope
+        dns:
+          - example01.platform-scope.pod.cac.corp.aks.sunlife.com
+          - example02.platform-scope.pod.cac.corp.aks.sunlife.com
+
+        namespace: pie-grafana
+        dns:
+          - example01.pie-grafana.pod.cac.corp.aks.sunlife.com
     validations:
       required: true
   - type: markdown
