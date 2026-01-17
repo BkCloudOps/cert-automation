@@ -16,8 +16,13 @@ jobs:
       (github.event.issue.state == 'open' && github.event.comment.body == '/create-PR-DNS')
     runs-on: ubuntu-latest
 
+    outputs:
+      request_payload: ${{ steps.parse.outputs.request_payload }}
+      request_id: ${{ steps.parse.outputs.request_id }}
+      environment: ${{ steps.parse.outputs.environment }}
+
     steps:
-      - name: Parse issue form -> build JSON payload file
+      - name: Parse issue form -> build inputdata.json
         id: parse
         shell: bash
         run: |
@@ -107,17 +112,13 @@ jobs:
             "requests": requests,
           }
 
-          # write both raw + pretty
-          with open("request_payload.json", "w") as f:
-            json.dump(payload, f)
-          with open("request_payload.pretty.json", "w") as f:
+          # Save pretty JSON to file named inputdata.json
+          with open("inputdata.json", "w") as f:
             json.dump(payload, f, indent=2)
 
-          print("✅ Generated payload files:")
-          print(" - input.json (raw)")
-          print(" - input.pretty.json (pretty)")
+          print("✅ Generated payload file: inputdata.json")
 
-          # also expose as outputs (strings)
+          # Expose as outputs (string)
           payload_json = json.dumps(payload)
           with open(os.environ["GITHUB_OUTPUT"], "a") as out:
             out.write(f"request_id={request_id}\n")
@@ -130,8 +131,15 @@ jobs:
       - name: Print payload in logs (pretty)
         shell: bash
         run: |
-          echo "================ PRETTY JSON ================"
-          cat input.pretty.json
-          echo "============================================"
+          echo "================ inputdata.json ================"
+          cat inputdata.json
+          echo "==============================================="
 
-
+  run-automation:
+    needs: preview-payload
+    uses: ./.github/workflows/test-certificate-automation.yml
+    secrets: inherit
+    with:
+      request_payload: ${{ needs.preview-payload.outputs.request_payload }}
+      request_id: ${{ needs.preview-payload.outputs.request_id }}
+      environment: ${{ needs.preview-payload.outputs.environment }}
