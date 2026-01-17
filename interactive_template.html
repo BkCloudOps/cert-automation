@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Certificate Automation - Interactive Template</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      }
+
+      body {
+        margin: 0;
+        background: #f6f7fb;
+        color: #1f2633;
+      }
+
+      .page {
+        max-width: 860px;
+        margin: 48px auto;
+        padding: 0 24px 48px;
+      }
+
+      header {
+        margin-bottom: 24px;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: 28px;
+      }
+
+      p {
+        margin: 0;
+        color: #566077;
+      }
+
+      .card {
+        background: #ffffff;
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+      }
+
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 20px;
+      }
+
+      label {
+        font-weight: 600;
+        font-size: 14px;
+      }
+
+      input {
+        border: 1px solid #d8deea;
+        border-radius: 10px;
+        padding: 10px 14px;
+        font-size: 14px;
+      }
+
+      .dns-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .dns-row {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .dns-row input {
+        flex: 1;
+      }
+
+      button {
+        border: none;
+        border-radius: 10px;
+        padding: 10px 14px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .add-btn {
+        background: #1d4ed8;
+        color: #fff;
+      }
+
+      .remove-btn {
+        background: #f1f5f9;
+        color: #334155;
+      }
+
+      .actions {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin-top: 16px;
+      }
+
+      .json-output {
+        margin-top: 24px;
+        background: #0f172a;
+        color: #e2e8f0;
+        border-radius: 12px;
+        padding: 16px;
+        font-family: "SFMono-Regular", ui-monospace, monospace;
+        white-space: pre-wrap;
+      }
+
+      .helper {
+        font-size: 12px;
+        color: #64748b;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <header>
+        <h1>Interactive DNS Request Template</h1>
+        <p>Fill in the namespace and DNS list, then copy the JSON output.</p>
+      </header>
+
+      <section class="card">
+        <div class="field">
+          <label for="namespace">Namespace</label>
+          <input id="namespace" type="text" placeholder="e.g. platform-scope" />
+        </div>
+
+        <div class="field">
+          <label>DNS List</label>
+          <div class="dns-list" id="dnsList"></div>
+          <span class="helper">Use the + button to add another DNS entry.</span>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="add-btn" id="addDns">+ Add DNS</button>
+          <button type="button" class="remove-btn" id="clearDns">Clear All</button>
+        </div>
+
+        <div class="json-output" id="jsonOutput">{
+  "namespace": "",
+  "dns_names": [
+    ""
+  ]
+}</div>
+      </section>
+    </div>
+
+    <script>
+      const dnsList = document.getElementById("dnsList");
+      const addDnsButton = document.getElementById("addDns");
+      const clearButton = document.getElementById("clearDns");
+      const namespaceInput = document.getElementById("namespace");
+      const jsonOutput = document.getElementById("jsonOutput");
+
+      const buildRow = (value = "") => {
+        const row = document.createElement("div");
+        row.className = "dns-row";
+
+        const input = document.createElement("input");
+        input.type = "text";
+        input.placeholder = "e.g. service.namespace.pod.cac.corp.aks.sunlife.com";
+        input.value = value;
+        input.addEventListener("input", updateJson);
+
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "remove-btn";
+        remove.textContent = "Remove";
+        remove.addEventListener("click", () => {
+          row.remove();
+          updateJson();
+        });
+
+        row.append(input, remove);
+        return row;
+      };
+
+      const updateJson = () => {
+        const namespace = namespaceInput.value.trim();
+        const dnsNames = Array.from(dnsList.querySelectorAll("input"))
+          .map((input) => input.value.trim())
+          .filter((value) => value.length > 0);
+
+        const output = {
+          namespace,
+          dns_names: dnsNames.length ? dnsNames : [""]
+        };
+
+        jsonOutput.textContent = JSON.stringify(output, null, 2);
+      };
+
+      addDnsButton.addEventListener("click", () => {
+        dnsList.appendChild(buildRow());
+      });
+
+      clearButton.addEventListener("click", () => {
+        dnsList.innerHTML = "";
+        dnsList.appendChild(buildRow());
+        updateJson();
+      });
+
+      namespaceInput.addEventListener("input", updateJson);
+
+      dnsList.appendChild(buildRow());
+      updateJson();
+    </script>
+  </body>
+</html>
