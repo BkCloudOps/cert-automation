@@ -137,7 +137,7 @@ jobs:
 
   run-automation:
     needs: preview-payload
-    uses: ./.github/workflows/test-certificate-automation.yml
+    uses: ./.github/workflows/certificate-automation.yml
     secrets: inherit
     with:
       request_payload: ${{ needs.preview-payload.outputs.request_payload }}
