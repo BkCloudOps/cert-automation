@@ -115,25 +115,27 @@ jobs:
             --input ../inputdata.json \
             --repo-name "${{ steps.branch.outputs.repo_name }}" \
             --create-audit \
-            --audit-file AUDIT.md
+            --audit-file AUDITtemp.md
+
+          echo AUDITtemp.md >> AUDIT.md
 
           rm ../inputdata.json
 
           
 
       
-      # - name: Read PR description
-      #   id: pr-description
-      #   run: |
-      #     if [ -f PR_DESCRIPTION.md ]; then
-      #       {
-      #         echo 'description<<EOF'
-      #         cat PR_DESCRIPTION.md
-      #         echo EOF
-      #       } >> $GITHUB_OUTPUT
-      #     else
-      #       echo "description=Automated certificate configuration updates" >> $GITHUB_OUTPUT
-      #     fi
+      - name: Read PR description
+        id: pr-description
+        run: |
+          if [ -f AUDITtemp.md ]; then
+            {
+              echo 'description<<EOF'
+              cat AUDITtemp.md
+              echo EOF
+            } >> $GITHUB_OUTPUT
+          else
+            echo "description=Automated certificate configuration updates" >> $GITHUB_OUTPUT
+          fi
       
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6
@@ -150,7 +152,7 @@ jobs:
             Triggered by: ${{ github.event_name }}
             Repository: ${{ steps.branch.outputs.repo_name }}
           title: ${{ steps.branch.outputs.pr_title }}
-          # body: ${{ steps.pr-description.outputs.description }}
+          body: ${{ steps.pr-description.outputs.description }}
           # labels: |
           #   automation
           #   certificates
