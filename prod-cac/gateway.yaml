@@ -1,0 +1,178 @@
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: claude-plt-gateway
+  namespace: claude-plt-system
+spec:
+  selector:
+    istio: claude-plt-ingressgateway
+  servers:
+    - hosts: &cluster-host-list-claude-plt
+        - "claude-plt/claude-plt.pod.cac.plant.aks.sunlife.com"
+        - "claude-plt/*.claude-plt.pod.cac.plant.aks.sunlife.com"
+      port:
+        name: https-claude-plt
+        number: 443
+        protocol: HTTPS
+      tls:
+        credentialName: claude-plt-ingress-certificate
+        mode: SIMPLE
+        minProtocolVersion: TLSV1_2
+    - hosts: *cluster-host-list-claude-plt
+      port:
+        name: http-claude-plt
+        number: 80
+        protocol: HTTP
+      tls:
+        httpsRedirect: true
+    - hosts: &cluster-host-list-provisioning-services
+        - "provisioning-services/provisioning-services.pod.cac.plant.aks.sunlife.com"
+        - "provisioning-services/*.provisioning-services.pod.cac.plant.aks.sunlife.com"
+        - "provisioning-services/provisioning.platform.sunlife.io"
+        - "provisioning-services/cf-mgmt.plant.aks.sunlife.com"
+        - "provisioning-services/provisioning-approval.plant.aks.sunlife.com"
+        - "provisioning-services/change-api.plant.aks.sunlife.com"
+        - "provisioning-services/change-api.plant.aks.sunlife.com"
+        - "provisioning-services/apigee-ci.plant.aks.sunlife.com"
+        - "provisioning-services/provisioning-auth.plant.aks.sunlife.com"
+        - "provisioning-services/provisioning.plant.aks.sunlife.com"
+        - "provisioning-services/provisioning-auth.plant.cac.pod.aks.sunlife.com"
+      port:
+        name: https-provisioning-services
+        number: 443
+        protocol: HTTPS
+      tls:
+        credentialName: claude-plt-provisioning-services-ingress-certificate
+        mode: SIMPLE
+        minProtocolVersion: TLSV1_2
+    - hosts: *cluster-host-list-provisioning-services
+      port:
+        name: http-provisioning-services
+        number: 80
+        protocol: HTTP
+      tls:
+        httpsRedirect: true
+    - hosts: &cluster-host-list-core-services
+        - "core-services/core-services.pod.cac.plant.aks.sunlife.com"
+        - "core-services/*.core-services.pod.cac.plant.aks.sunlife.com"
+        - "core-services/ldap-service.pod.plant.aks.sunlife.com"
+      port:
+        name: https-core-services
+        number: 443
+        protocol: HTTPS
+      tls:
+        credentialName: claude-plt-core-services-ingress-certificate
+        mode: SIMPLE
+        minProtocolVersion: TLSV1_2
+    - hosts: *cluster-host-list-core-services
+      port:
+        name: http-core-services
+        number: 80
+        protocol: HTTP
+      tls:
+        httpsRedirect: true
+    - hosts: &cluster-host-list-platform-scope
+        - "platform-scope/platform-scope.pod.cac.plant.aks.sunlife.com"
+        - "platform-scope/*.platform-scope.pod.cac.plant.aks.sunlife.com"
+        - "platform-scope/alicloud-chargeback.sunlife.ets"
+        - "platform-scope/databricks-chargeback.sunlife.ets"
+        - "platform-scope/aks-chargeback.sunlife.ets"
+        - "platform-scope/example03.platform-scope.pod.cac.corp.aks.sunlife.com"
+      port:
+        name: https-platform-scope
+        number: 443
+        protocol: HTTPS
+      tls:
+        credentialName: claude-plt-platform-scope-ingress-certificate
+        mode: SIMPLE
+        minProtocolVersion: TLSV1_2
+    - hosts: *cluster-host-list-platform-scope
+      port:
+        name: http-platform-scope
+        number: 80
+        protocol: HTTP
+      tls:
+        httpsRedirect: true
+    - hosts: &cluster-host-list-pie-grafana
+        - "pie-grafana/pie-grafana.pod.cac.plant.aks.sunlife.com"
+        - "pie-grafana/*.pie-grafana.pod.cac.plant.aks.sunlife.com"
+        - "pie-grafana/ets-grafana.pod.cac.plant.aks.sunlife.com"
+        - "pie-grafana/*.ets-grafana.pod.cac.plant.aks.sunlife.com"
+        - "pie-grafana/grafana.sunlife.ets"
+        - "pie-grafana/bkcloudops-chargeback.manulife.ets"
+      port:
+        name: https-pie-grafana
+        number: 443
+        protocol: HTTPS
+      tls:
+        credentialName: claude-plt-pie-grafana-ingress-certificate
+        mode: SIMPLE
+        minProtocolVersion: TLSV1_2
+    - hosts: *cluster-host-list-pie-grafana
+      port:
+        name: http-pie-grafana
+        number: 80
+        protocol: HTTP
+      tls:
+        httpsRedirect: true
+    - hosts: &cluster-host-list-devsecops
+        - "devsecops/devsecops.pod.cac.plant.aks.sunlife.com"
+        - "devsecops/*.devsecops.pod.cac.plant.aks.sunlife.com"
+        - "devsecops/vault-ops-api.aks.sunlife.com"
+        - "devsecops/*.vault-ops-api.aks.sunlife.com"
+      port:
+        name: https-devsecops
+        number: 443
+        protocol: HTTPS
+      tls:
+        credentialName: claude-plt-devsecops-ingress-certificate
+        mode: SIMPLE
+        minProtocolVersion: TLSV1_2
+    - hosts: *cluster-host-list-devsecops
+      port:
+        name: http-devsecops
+        number: 80
+        protocol: HTTP
+      tls:
+        httpsRedirect: true
+    - hosts: &cluster-host-list-snow-cmdb-facade
+        - "snow-cmdb-facade/snow-cmdb-facade.pod.cac.plant.aks.sunlife.com"
+        - "snow-cmdb-facade/*.snow-cmdb-facade.pod.cac.plant.aks.sunlife.com"
+        - "snow-cmdb-facade/snow-cmdb-facade.pod.plant.aks.sunlife.com"
+      port:
+        name: https-snow-cmdb-facade
+        number: 443
+        protocol: HTTPS
+      tls:
+        credentialName: claude-plt-snow-cmdb-facade-ingress-certificate
+        mode: SIMPLE
+        minProtocolVersion: TLSV1_2
+    - hosts: *cluster-host-list-snow-cmdb-facade
+      port:
+        name: http-snow-cmdb-facade
+        number: 80
+        protocol: HTTP
+      tls:
+        httpsRedirect: true
+    - hosts: &cluster-host-list-network-security
+        - "network-security/network-security.pod.cac.plant.aks.sunlife.com"
+        - "network-security/*.network-security.pod.cac.plant.aks.sunlife.com"
+        - "network-security/*.network-security.cac.plant.aks.sunlife.com"
+        - "network-security/network-security.cac.plant.aks.sunlife.com"
+        - "network-security/netshield.cac.plant.aks.sunlife.com"
+        - "network-security/*.netshield.cac.plant.aks.sunlife.com"
+      port:
+        name: https-network-security
+        number: 443
+        protocol: HTTPS
+      tls:
+        credentialName: claude-plt-network-security-ingress-certificate
+        mode: SIMPLE
+        minProtocolVersion: TLSV1_2
+    - hosts: *cluster-host-list-network-security
+      port:
+        name: http-network-security
+        number: 80
+        protocol: HTTP
+      tls:
+        httpsRedirect: true
