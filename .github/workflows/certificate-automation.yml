@@ -93,6 +93,7 @@ jobs:
       - name: Generate branch name
         id: branch
         run: |
+          echo '${{ inputs.request_payload }}' > inputdata.json
           REPO_NAME=$(jq -r '.repo_name' inputdata.json)
           TIMESTAMP=$(date +%Y%m%d-%H%M%S)
           BRANCH_NAME="cert-automation-${{ inputs.request_id }}"
