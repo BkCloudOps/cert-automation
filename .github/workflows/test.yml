@@ -1,0 +1,35 @@
+# .github/workflows/test-github-app-auth.yml
+name: Test GitHub App Auth
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-auth:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: GitHub App Auth
+        uses: TimoWilhelm/action-github-app-auth@v1.0.0
+        with:
+          app-id: "2941472:
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          # installation-id: 
+          set-git-credentials: true
+
+      - name: Show current identity
+        run: |
+          echo "Actor: $GITHUB_ACTOR"
+          echo "Repository: $GITHUB_REPOSITORY"
+          echo "Git remote:"
+          git remote -v
+
+      - name: Simple API call with app token
+        env:
+          GH_TOKEN: ${{ env.GITHUB_TOKEN || '' }}
+        run: |
+          echo "Listing issues via GitHub App token (if configured)..."
+          gh api repos/${GITHUB_REPOSITORY}/issues --paginate | head -n 20 || echo "gh not configured"
