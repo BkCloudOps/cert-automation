@@ -19,8 +19,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: BkCloudOps/backstage-app
-          token: ${{ env.GITHUB_APP_TOKEN }}
           ref: main
+          token: ${{ env.GITHUB_APP_TOKEN }}
 
       - name: Create sample change
         run: |
@@ -35,7 +35,7 @@ jobs:
 
           git checkout -b "$BRANCH"
           git add SAMPLE_PR_TEST.md
-          git commit -m "Sample PR from cert-automation GitHub App"
+          git commit -m "Sample PR from cert-automation GitHub App" || exit 0
           git push origin "$BRANCH"
 
       - name: Create PR in backstage-app
@@ -43,7 +43,6 @@ jobs:
           GH_TOKEN: ${{ env.GITHUB_APP_TOKEN }}
         run: |
           BRANCH=$(git rev-parse --abbrev-ref HEAD)
-
           gh pr create \
             --repo BkCloudOps/backstage-app \
             --head "$BRANCH" \
