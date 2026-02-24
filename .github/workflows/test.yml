@@ -1,4 +1,3 @@
-# .github/workflows/test-github-app-auth.yml
 name: Test GitHub App Auth
 
 on:
@@ -15,9 +14,9 @@ jobs:
       - name: GitHub App Auth
         uses: TimoWilhelm/action-github-app-auth@v1.0.0
         with:
-          app-id: "2941472:
+          app-id: "2941472"
           private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
-          # installation-id: 
+          # installation-id: "YOUR_INSTALLATION_ID"
           set-git-credentials: true
 
       - name: Show current identity
