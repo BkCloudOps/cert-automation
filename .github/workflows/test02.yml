@@ -1,0 +1,51 @@
+name: Sample PR to backstage-app (clean)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  sample-pr:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: GitHub App Auth
+        uses: TimoWilhelm/action-github-app-auth@v1.0.0
+        with:
+          app-id: 2941472
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          set-git-credentials: true
+
+      - name: Checkout backstage-app with app token
+        uses: actions/checkout@v4
+        with:
+          repository: BkCloudOps/backstage-app
+          ref: main
+          token: ${{ env.GITHUB_APP_TOKEN }}
+
+      - name: Create sample change
+        run: |
+          echo "Sample PR created at $(date -u)" >> SAMPLE_PR_TEST.md
+
+      - name: Commit and push as app bot
+        run: |
+          BRANCH="sample-app-pr-$(date +%Y%m%d%H%M%S)"
+
+          git config user.name "cert-automation-app[bot]"
+          git config user.email "cert-automation-app[bot]@users.noreply.github.com"
+
+          git checkout -b "$BRANCH"
+          git add SAMPLE_PR_TEST.md
+          git commit -m "Sample PR from cert-automation GitHub App" || exit 0
+          git push origin "$BRANCH"
+
+      - name: Create PR in backstage-app
+        env:
+          GH_TOKEN: ${{ env.GITHUB_APP_TOKEN }}
+        run: |
+          BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          gh pr create \
+            --repo BkCloudOps/backstage-app \
+            --head "$BRANCH" \
+            --base "main" \
+            --title "Sample PR from cert-automation app" \
+            --body "This is a sample PR created automatically by the cert-automation GitHub App."
