@@ -1,0 +1,112 @@
+name: Bulk Export Incidents
+
+on:
+  workflow_dispatch:
+    inputs:
+      org:
+        description: 'Source org name (e.g. manulife-ets-sandbox)'
+        required: true
+        type: string
+      repos:
+        description: 'Comma-separated repo names to export'
+        required: true
+        type: string
+
+jobs:
+  bulk-export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.REPO_PAT }}
+
+      - name: Install jq
+        run: sudo apt-get install -y jq
+
+      - name: Create output directory
+        run: mkdir -p output/${{ inputs.org }}
+
+      - name: Build repo list
+        id: repos
+        run: |
+          REPO_LIST=""
+          IFS=',' read -ra ITEMS <<< "${{ inputs.repos }}"
+          for ITEM in "${ITEMS[@]}"; do
+            REPO=$(echo "$ITEM" | xargs) # trim whitespace
+            if [ -n "$REPO" ]; then
+              REPO_LIST="${REPO_LIST}${REPO}"$'\n'
+            fi
+          done
+
+          REPO_LIST=$(echo "$REPO_LIST" | sed '/^$/d')
+          if [ -z "$REPO_LIST" ]; then
+            echo "Error: No repos provided."
+            exit 1
+          fi
+
+          COUNT=$(echo "$REPO_LIST" | wc -l | xargs)
+          echo "Found ${COUNT} repo(s) to export:"
+          echo "$REPO_LIST"
+
+          echo "$REPO_LIST" > /tmp/repo-list.txt
+          echo "count=${COUNT}" >> "$GITHUB_OUTPUT"
+
+      - name: Export incidents
+        env:
+          GG_TOKEN: ${{ secrets.GG_TOKEN }}
+        run: |
+          chmod +x scripts/export-incidents.sh
+
+          ORG="${{ inputs.org }}"
+          TOTAL=0
+          SUCCESS=0
+          FAILED=0
+          FAILED_REPOS=""
+
+          while IFS= read -r REPO; do
+            TOTAL=$((TOTAL + 1))
+            echo ""
+            echo "================================================================"
+            echo "[$TOTAL] Exporting: ${ORG}/${REPO}"
+            echo "================================================================"
+
+            if scripts/export-incidents.sh "$ORG" "$REPO" > "output/${ORG}/${REPO}.json"; then
+              echo "=== Output ==="
+              cat "output/${ORG}/${REPO}.json"
+              SUCCESS=$((SUCCESS + 1))
+            else
+              FAILED=$((FAILED + 1))
+              FAILED_REPOS="${FAILED_REPOS}  - ${REPO}"$'\n'
+              echo "  *** FAILED: ${REPO} ***"
+              # Remove empty/partial output file on failure
+              rm -f "output/${ORG}/${REPO}.json"
+            fi
+          done < /tmp/repo-list.txt
+
+          echo ""
+          echo "================================================================"
+          echo "BULK EXPORT SUMMARY"
+          echo "================================================================"
+          echo "Total:     ${TOTAL}"
+          echo "Succeeded: ${SUCCESS}"
+          echo "Failed:    ${FAILED}"
+          if [ -n "$FAILED_REPOS" ]; then
+            echo ""
+            echo "Failed repos:"
+            echo "$FAILED_REPOS"
+          fi
+          echo "================================================================"
+
+          if [ "$FAILED" -gt 0 ]; then
+            exit 1
+          fi
+
+      - name: Commit output
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git pull origin main
+          git add output/${{ inputs.org }}/
+          git commit -m "Bulk export incidents for ${{ inputs.org }} ($(wc -l < /tmp/repo-list.txt | xargs) repos)" || echo "No changes to commit"
+          git push
