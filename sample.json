@@ -1,0 +1,43 @@
+{
+  "source": "mfc-archive/GitGuardian-migrationtest-repo-02",
+  "source_id": 26548431,
+  "total": 4,
+  "incidents": {
+    "TRIGGERED": [
+      {
+        "id": 27983941,
+        "sha": "47126a1380b37f688d62e55bb56f175343a6a57a",
+        "status": "TRIGGERED",
+        "secret_revoked": false
+      },
+      {
+        "id": 27983944,
+        "sha": "47126a1380b37f688d62e55bb56f175343a6a57a",
+        "status": "TRIGGERED",
+        "secret_revoked": false
+      }
+    ],
+    "RESOLVED": [],
+    "IGNORED": [
+      {
+        "id": 27983942,
+        "sha": "5103f754c7fd8546def98c6d02e06a3e34fae401",
+        "status": "IGNORED",
+        "secret_revoked": false,
+        "ignore_reason": "invalid"
+      },
+      {
+        "id": 27983943,
+        "sha": "5103f754c7fd8546def98c6d02e06a3e34fae401",
+        "status": "IGNORED",
+        "secret_revoked": false,
+        "ignore_reason": "invalid"
+      }
+    ]
+  },
+  "summary": {
+    "open": 2,
+    "resolved": 0,
+    "ignored": 2
+  }
+}
