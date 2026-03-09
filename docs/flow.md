@@ -1,3 +1,4 @@
+```mermaid
 flowchart TD
 
 A[Request submitted] --> B[Preflight validation]
@@ -75,3 +76,4 @@ Y1 --> Z
 
 W --> W1[Send no action needed email]
 W1 --> Z
+```
