@@ -1,77 +1,38 @@
+```mermaid
 flowchart TD
 
-A[Request submitted] --> B[Preflight validation]
+A[Scheduler Trigger] --> B[Scan ServiceNow tickets in timeframe]
 
-B --> C[Validate request type and scope]
-C -->|Fail| X[Cancel request]
+B --> C[For each ticket]
 
-C --> D[Validate requested user identity]
-D -->|Fail| X
+C --> D{AD group exists in Azure AD}
+D -- No --> X[Comment ticket: AD group not found and stop]
 
-D --> E[Validate organization]
-E -->|Fail| X
+D -- Yes --> E{AD group naming follows IIQ standard}
+E -- No --> X
 
-E --> F{Repo access requested}
-F -->|Yes| G[Validate repository exists in org]
-G -->|Fail| X
-G --> H[Validate repo state and governance]
-H -->|Fail| Y[Manual review]
+E -- Yes --> F{User assigned to GitHub Enterprise App}
 
-F -->|No| I[Validate business justification]
+F -- No --> G[Assign user to GitHub Enterprise App]
+G --> H
 
-H --> I
-I -->|Fail| X
+F -- Yes --> H{GitHub team already exists}
 
-I --> J{Temporary access}
-J -->|Yes| K[Validate expiry date]
-K -->|Fail| X
-J -->|No| L[Validate permission requested]
-K --> L
+H -- No --> I[Create GitHub team]
+I --> J
 
-L -->|Fail| X
-L --> M[Validate permission policy]
-M -->|Fail| Y
+H -- Yes --> J{ACL visible in GitHub}
 
-M --> N[Check duplicate or conflicting request]
-N -->|Duplicate| W[No action needed]
-N -->|Conflict| Y
-N --> O[Validate AD group exists in Azure]
+J -- No --> Y[Comment: Waiting for GitHub ACL sync]
+Y --> Z[Stop processing this ticket]
 
-O -->|Not found| X
-O --> P[Validate AD group naming and org alignment]
-P -->|Fail| X
+J -- Yes --> K{Team already mapped to ACL}
 
-P --> Q[Validate enterprise app assignment model]
-Q -->|Fail| Y
+K -- No --> L[Map team to ACL]
 
-Q --> R[Preflight passed]
+K -- Yes --> M[All steps already completed]
 
-R --> S{User onboarded to GitHub}
-S -->|Yes| T[Check GitHub team and IdP mapping]
-S -->|No| U[Assign AD group to enterprise app]
+L --> N[Comment success on ticket]
+M --> N
 
-U --> V[Wait for GitHub sync up to 45 min]
-V -->|Timeout| Y
-V --> T
-
-T -->|Unsupported mapping| Y
-T --> AA[Check if access already exists]
-
-AA -->|Exists| W
-AA -->|Not present| AB[Grant org or repo access via team]
-
-AB -->|Fail| Y
-AB --> AC[Verify final state]
-
-AC -->|Fail| Y
-AC --> AD[Send success email]
-AD --> Z[Close ticket]
-
-X --> X1[Send cancellation email]
-X1 --> Z
-
-Y --> Y1[Send manual review email]
-Y1 --> Z
-
-W --> W1[Send no action needed email]
-W1 --> Z
+N --> O[Close or resolve request]
